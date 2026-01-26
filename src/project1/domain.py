@@ -16,7 +16,7 @@ def build_domain(figname=""):
     Dx, Dy = bladelower[-1,0], bladelower[-1,1]
 
     # x grid for the periodic boundary group 1 and group 2
-    nBNodes = 69
+    nBNodes = 14
     PG1_up_xgrid = np.linspace(Ax-17.0, Ax, nBNodes) # x-nodes on periodic boundaries must match
     PG1_low_xgrid = PG1_up_xgrid[::-1]                    # reverse
     PG2_up_xgrid = np.linspace(Dx, Dx+17.0, nBNodes) # x-nodes on periodic boundaries must match
@@ -29,19 +29,23 @@ def build_domain(figname=""):
     PG2_low_ygrid = np.full(nBNodes, Cy)
 
     # inflow and outflow boundaries
-    nBNodes_inout = 73
+    nBNodes_inout = 15
     inflow_xgrid = np.full(nBNodes_inout, Ax-17.0)
     inflow_ygrid = np.linspace(By, Ay, nBNodes_inout)
     outflow_xgrid = np.full(nBNodes_inout, Dx+17.0)
     outflow_ygrid = np.linspace(Dy, Cy, nBNodes_inout)
 
+    # Pick every x-th point
+    bladelower_coarse = bladelower[::4, :]
+    bladeupper_coarse = bladeupper[::4, :]
+
     # x-nodes on boundary 1 and 2 match with each other
     boundary_1 = np.column_stack((PG1_up_xgrid, PG1_up_ygrid))[:-1, :]
-    boundary_2 = bladelower[:-1, :]
+    boundary_2 = bladelower_coarse[:-1, :]
     boundary_3 = np.column_stack((PG2_up_xgrid, PG2_up_ygrid))[:-1, :]
     boundary_4 = np.column_stack((outflow_xgrid, outflow_ygrid))[:-1, :]
     boundary_5 = np.column_stack((PG2_low_xgrid, PG2_low_ygrid))[:-1, :]
-    boundary_6 = bladeupper[:-1, :]
+    boundary_6 = bladeupper_coarse[:-1, :]
     boundary_7 = np.column_stack((PG1_low_xgrid, PG1_low_ygrid))[:-1, :]
     boundary_8 = np.column_stack((inflow_xgrid, inflow_ygrid))[:-1, :]
 

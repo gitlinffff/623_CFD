@@ -29,19 +29,22 @@ def equilateral_tri_mesh(extent,a):
     Y += extent[2]
 
     # avoid boundary touching by shifting grid slightly
-    X -= a/4.; Y -= h/2.
+    X -= a/4.; Y -= 0.4 * h
 
     # Apply offsets to every second row to create equilateral triangles
     X[1::2, :] += a/2.
 
     return X, Y
 
-def generate_unstructured_mesh(output_dir):
+def generate_unstructured_mesh(a, output_dir):
+    """
+    a: edge length of an equilateral triangle
+    output_dir: directory to save output files
+    """
     os.makedirs(output_dir, exist_ok=True)
 
     # Build initial equilateral triangle mesh
     boundary, extent = build_domain()
-    a = 1.5     # edge length of the equilateral triangle
     X, Y = equilateral_tri_mesh(extent, a)
 
     # Check which nodes are inside the boundary
@@ -91,4 +94,6 @@ def generate_unstructured_mesh(output_dir):
     return all_nodes, boundary, inside_nodes, simp
 
 if __name__ == "__main__":
-    generate_unstructured_mesh(output_dir='../../output/project1/')
+    a = 17./13. # edge length of an equilateral triangle
+    output_dir = '../../output/project1/'
+    generate_unstructured_mesh(a, output_dir)
