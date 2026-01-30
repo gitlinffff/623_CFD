@@ -35,7 +35,10 @@ def verify_mesh(fname):
     # Compute magnitude of error for each element
     error_magnitudes = np.linalg.norm(element_errors, axis=1)
     max_error = np.max(error_magnitudes)
+    error_elements = np.sum(error_magnitudes > 1e-12)
+    
     print(f"Maximum error magnitude: {max_error}")
+    print(f"Number of elements with errors: {error_elements}")
     # Check if errors are close to machine precision
     if max_error < 1e-12:
         print("Verification PASSED: Errors are within machine precision.")
@@ -45,4 +48,4 @@ def verify_mesh(fname):
 
 if __name__ == "__main__":
     verify_mesh("test.gri")
-    verify_mesh("initial_mesh.gri")
+    verify_mesh("initial_mesh_3.gri")
