@@ -100,7 +100,19 @@ def generate_matrices(fname):
                         # If aligned (L traversed small->large), Rot(edge) is Outward for L.
                         # If not aligned (L traversed large->small), Rot(edge) is Inward for L (because Rot(large->small) = -Rot(small->large)).
                         nx, ny = edge[1], -edge[0]
-                        if not aligned:
+                        
+                        # Check geometric alignment of the canonical edges (Small->Large)
+                        # Current edge is 'edge' (normalized). 
+                        # Other edge (from visited face) needs to be calculated.
+                        # Note: edge is normalized, vec_other is not, but dot sign is enough.
+                        vec_other = mesh['V'][other_endpts[1]] - mesh['V'][other_endpts[0]]
+                        is_antiparallel = np.dot(edge, vec_other) < 0
+                        
+                        flip = not aligned
+                        if is_antiparallel:
+                             flip = not flip
+                        
+                        if flip:
                             nx, ny = -nx, -ny
                         In.append([nx, ny])
                         In_len.append(length)
@@ -133,6 +145,7 @@ def generate_matrices(fname):
                     length = np.linalg.norm(edge)
                     edge /= length
                     nx, ny = edge[1], -edge[0]
+
                     if not aligned:
                         nx, ny = -nx, -ny
                     In.append([nx, ny])
@@ -143,6 +156,10 @@ def generate_matrices(fname):
                     faceL = 3 if j == 0 else j # convert j to 1-indexed local face number
                     visited[faceID] = (elemL, faceL, tris[i,j] < tris[i,j+1]) # add face to hash table
 
+    if len(visited) > 0:
+        print(f"WARNING: {len(visited)} edges were visited only once but are not marked as boundaries!")
+        print("These edges are ignored in I2E and B2E.")
+    
     matrices = {
         'I2E': np.array(I2E),
         'In': np.array(In),
