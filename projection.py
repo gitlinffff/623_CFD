@@ -51,12 +51,8 @@ def read_gri(filename):
     except StopIteration:
         return None, None, None
 
-# ==========================================
-# 2. 修改边界提取：同时包含 BGroup2 和 BGroup6
-# ==========================================
 def get_blade_segments(nodes, boundaries):
     blade_segments = []
-    # initial3.gri 中 BGroup2 和 BGroup6 共同构成了叶片边界
     target_groups = ["BGroup2", "BGroup6"] 
     
     for title, faces in boundaries.items():
