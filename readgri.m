@@ -1,4 +1,5 @@
-function [nelem,xelem,yelem,nedges,xedge,yedge,ledges,elemedge,BCs,Bcxelem,Bcyelem,LBF,PeriG] = readgri(grifile)
+
+function [nelem,xelem,yelem,nedges,xedge,yedge,ledges,elemedge,BCs,Bcxelem,Bcyelem,LBF,PeriG,Vertsx,Vertsy] = readgri(grifile)
 
 % Read mesh (gri file)
 
@@ -13,6 +14,8 @@ for inode = 1:nnode
   A = fscanf(fid, '%lf', 2);
   Verts(inode,:) = A(1:2)';
 end
+Vertsx = Verts(:,1);
+Vertsy = Verts(:,2);
 % Read through boundary info
 A = fscanf(fid, '%d', 1);
 nbfgrp = A(1);
