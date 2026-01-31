@@ -1,3 +1,4 @@
+
 function creategri(refelem,nnodes,xnode,ynode,nodecon,nbfgrp,LBF,BCs,Bcxelem,Bcyelem,filename)
 fid = fopen(filename,'w');
 fprintf(fid,'%d %d 2\n',[nnodes refelem]);
@@ -187,19 +188,19 @@ fprintf(fid,'2 PeriodicGroup\n');
 
 fprintf(fid,'%d Translational\n',LBF(1)+1);
 
-for ii = 1:length(p1)
-    for jj = 1:length(p7)
-        if xnode(p1(ii))==xnode(p7(jj))
-            fprintf(fid,'%d %d\n',[p1(ii) p7(jj)]);
+for ii = 1:length(p1N)
+    for jj = 1:length(p7N)
+        if xnode(p1N(ii))==xnode(p7N(jj))
+            fprintf(fid,'%d %d\n',[p1N(ii) p7N(jj)]);
             break
         end
     end
 end
 fprintf(fid,'%d Translational\n',LBF(3)+1);
-for ii = 1:length(p3)
-    for jj = 1:length(p5)
-        if xnode(p3(ii))==xnode(p5(jj))
-            fprintf(fid,'%d %d\n',[p3(ii) p5(jj)]);
+for ii = 1:length(p3N)
+    for jj = 1:length(p5N)
+        if xnode(p3N(ii))==xnode(p5N(jj))
+            fprintf(fid,'%d %d\n',[p3N(ii) p5N(jj)]);
             break
         end
     end
