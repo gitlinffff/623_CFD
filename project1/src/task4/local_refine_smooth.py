@@ -3,10 +3,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import sparse
 from scipy.sparse import linalg
-from projection import read_gri, get_blade_segments, calcProjection
+from projection import calcProjection, read_blade_segments
 from projection import sizing_function_2 as sizing_function
 from generate_matrices import readgri, generate_matrices
 
+# get the blade segment coordinates for projection and sizing function evaluation
+blade_seg_coords = read_blade_segments('../../data/bladeupper.txt', '../../data/bladelower.txt')
+
+# get x coordinates of blade leading and trailing points
+xL, xT = -9.461749, 9.342241
 
 def plot_mesh_and_h_field(V, E, edge_midpoints, h_field, save_path):
     centroids = np.mean(V[E], axis=1)
@@ -56,21 +61,18 @@ def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
     B2E = mats['B2E'] # 1-based indexing
 
     # get the blade edges from B2E
-    blade_edges = []
-    for row in B2E:
-        elem = row[0] - 1
-        face = row[1]
-        bgroup = row[2]
-        n1 = E[elem, face-2]
-        n2 = E[elem, face-3]
-        if (bgroup == 2) or (bgroup == 6):
-            blade_edges.append([n1, n2])
-    blade_edges = np.array(blade_edges, dtype=int)
-    blade_edge_coords = V[blade_edges]
+#    blade_edges = []
+#    for row in B2E:
+#        elem = row[0] - 1
+#        face = row[1]
+#        bgroup = row[2]
+#        n1 = E[elem, face-2]
+#        n2 = E[elem, face-3]
+#        if (bgroup == 2) or (bgroup == 6):
+#            blade_edges.append([n1, n2])
+#    blade_edges = np.array(blade_edges, dtype=int)
+#    blade_edge_coords = V[blade_edges]
 
-    # get x coordinates of blade leading and trailing edges
-    #xblade = blade_edge_coords[:, :, 0]
-    xL, xT = -9.461749, 9.342241
 
     # populate an array the same shape as E with -1 to flag the edges with new nodes index
     flag = np.ones(E.shape, dtype=int) * (-1)
@@ -107,7 +109,7 @@ def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
         edge_midpoints.append(edge_midpoint1)
         edge_lengths.append(edge_length)
 
-        d, xb, proj_point = calcProjection(edge_midpoint1, blade_edge_coords)
+        d, xb, proj_point = calcProjection(edge_midpoint1, blade_seg_coords)
         h = sizing_function(d, xb, xL, xT)
         h_field.append(h)
 
@@ -175,9 +177,11 @@ def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
         edge_midpoints.append(edge_midpoint)
         edge_lengths.append(edge_length)
    
-        d, xb, proj_point = calcProjection(edge_midpoint, blade_edge_coords)
+        d, xb, proj_point = calcProjection(edge_midpoint, blade_seg_coords)
         h = sizing_function(d, xb, xL, xT)
         h_field.append(h)
+        if bgroup in [2, 6]: # snap the edge midpoint to the blade if it is a blade edge
+            edge_midpoint = proj_point  # use spline would be better
 
         # flag the edge if h < edge_length
         if h < edge_length:

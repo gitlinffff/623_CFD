@@ -96,6 +96,31 @@ def calcProjection_multinodes(nodes, blade_segments):
         proj_points[i] = best_proj
     return d, xb, proj_points
 
+def read_blade_segments(bladeupper_filepath, bladelower_filepath):
+    bladeupper_coords = np.loadtxt(bladeupper_filepath)
+    bladelower_coords = np.loadtxt(bladelower_filepath)
+
+    # shift the original upper blade down by 18 units to be the lower boundary
+    bladeupper_coords[:, 1] -= 18
+
+    N_upper = len(bladeupper_coords); N_lower = len(bladelower_coords)
+   
+    # create segments by connecting consecutive points
+    a = np.linspace(0, N_upper-2, num=N_upper-1, dtype=int)
+    b = np.linspace(1, N_upper-1, num=N_upper-1, dtype=int)
+    c = np.vstack((a, b)).T
+    upper_seg = bladeupper_coords[c]
+
+    a = np.linspace(0, N_lower-2, num=N_lower-1, dtype=int)
+    b = np.linspace(1, N_lower-1, num=N_lower-1, dtype=int)
+    c = np.vstack((a, b)).T
+    lower_seg = bladelower_coords[c]
+
+    blade_seg = np.vstack((upper_seg, lower_seg))
+    
+    return blade_seg
+
+
 def calcProjection(P, blade_segments):
     best_proj = np.array([np.nan, np.nan])
     min_dist = float('inf')
@@ -135,8 +160,8 @@ def sizing_function_1(d, xb, xL, xT):
 
 def sizing_function_2(d, xb, xL, xT):
     hmin = 0.6
-    sigma = 10
-    delta = 10
+    sigma = 11
+    delta = 11
 
     h = hmin * np.exp(-(xb-xL)*(xb-xT)/sigma**2) * np.exp(d/delta)
     return h
