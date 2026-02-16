@@ -23,8 +23,8 @@ def resample_by_distance(coords, target_distance):
 
 def build_domain(a, figname=""):
 
-    file_bladelower = "../../data/project1/bladelower.txt"
-    file_bladeupper = "../../data/project1/bladeupper.txt"
+    file_bladelower = "../../data/bladelower.txt"
+    file_bladeupper = "../../data/bladeupper.txt"
     bladelower = np.loadtxt(file_bladelower)
     bladeupper = np.loadtxt(file_bladeupper)
     bladeupper[:,1] -= 18.0  # Adjust y-coordinates of the upper blade surface
@@ -36,7 +36,7 @@ def build_domain(a, figname=""):
     Dx, Dy = bladelower[-1,0], bladelower[-1,1]
 
     # x grid for the periodic boundary group 1 and group 2
-    nBNodes = 14
+    nBNodes = 9
     PG1_up_xgrid = np.linspace(Ax-17.0, Ax, nBNodes) # x-nodes on periodic boundaries must match
     PG1_low_xgrid = PG1_up_xgrid[::-1]                    # reverse
     PG2_up_xgrid = np.linspace(Dx, Dx+17.0, nBNodes) # x-nodes on periodic boundaries must match
@@ -49,7 +49,7 @@ def build_domain(a, figname=""):
     PG2_low_ygrid = np.full(nBNodes, Cy)
 
     # inflow and outflow boundaries
-    nBNodes_inout = 15
+    nBNodes_inout = 9
     inflow_xgrid = np.full(nBNodes_inout, Ax-17.0)
     inflow_ygrid = np.linspace(By, Ay, nBNodes_inout)
     outflow_xgrid = np.full(nBNodes_inout, Dx+17.0)
@@ -87,11 +87,11 @@ def build_domain(a, figname=""):
 
     # Periodic boundary groups
     PG = {}
-    PG1_a = np.linspace(Btmn_idx[0], Btmn_idx[1], Btmn_idx[1]-Btmn_idx[0]+1)
-    PG1_b = np.linspace(Btmn_idx[7], Btmn_idx[6], Btmn_idx[7]-Btmn_idx[6]+1)
+    PG1_a = np.linspace(Btmn_idx[0], Btmn_idx[1], Btmn_idx[1]-Btmn_idx[0]+1, dtype=int)
+    PG1_b = np.linspace(Btmn_idx[7], Btmn_idx[6], Btmn_idx[7]-Btmn_idx[6]+1, dtype=int)
     PG[1] = np.column_stack((PG1_a, PG1_b))
-    PG2_a = np.linspace(Btmn_idx[2], Btmn_idx[3], Btmn_idx[3]-Btmn_idx[2]+1)
-    PG2_b = np.linspace(Btmn_idx[5], Btmn_idx[4], Btmn_idx[5]-Btmn_idx[4]+1)
+    PG2_a = np.linspace(Btmn_idx[2], Btmn_idx[3], Btmn_idx[3]-Btmn_idx[2]+1, dtype=int)
+    PG2_b = np.linspace(Btmn_idx[5], Btmn_idx[4], Btmn_idx[5]-Btmn_idx[4]+1, dtype=int)
     PG[2] = np.column_stack((PG2_a, PG2_b))
 
     # Plotting the boundary nodes if a figure name is provided
@@ -127,6 +127,6 @@ def build_domain(a, figname=""):
     return Bnodes, Btmn_idx, PG, extent
 
 if __name__ == "__main__":
-    a = 17./13. # edge length of an equilateral triangle
+    a = 17./8. # edge length of an equilateral triangle
     build_domain(a, "../../output/project1/domain_boundary.png")
     #build_domain()

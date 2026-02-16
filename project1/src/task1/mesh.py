@@ -191,10 +191,10 @@ def save_gri_file(filename, nodes, elements, Btmn_idx, PG):
                 f.write(f"{int(pair[0]+1)} {int(pair[1]+1)}\n") # 1-based indexing for nodes
 
 if __name__ == "__main__":
-    output_dir = '../../output/project1/run3'
+    output_dir = '../../output/initial_mesh4'
     os.makedirs(output_dir, exist_ok=True)
 
-    a = 17./13. # edge length of an equilateral triangle
+    a = 17./8. # edge length of an equilateral triangle
 
     # Build domain and get boundary nodes
     boundary_nodes, boundary_terminal_idx, periodic_groups, extent = build_domain(a, os.path.join(output_dir, "domain_boundary.png"))
