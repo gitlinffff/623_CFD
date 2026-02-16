@@ -17,24 +17,16 @@ g++ --version   # or: clang++ --version
 
 ---
 
-## Step 1: Clone the Repository
+## Step 1: Download ZIP and Extract
+
+1. Go to the GitHub repository page.
+2. Click **Code → Download ZIP**.
+3. Extract the ZIP file to your desired location.
+4. Open a terminal and enter the extracted project folder:
 
 ```bash
-git clone <your-repo-url>
-cd <repo-name>
-```
+cd <extracted-folder-name>
 
-You should see:
-```
-.
-├── CMakeLists.txt
-├── main.cpp
-├── mesh/
-│   └── initial_mesh_3.gri
-├── data/
-├── tests/
-└── ...
-```
 
 ---
 
