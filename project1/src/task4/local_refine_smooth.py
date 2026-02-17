@@ -48,9 +48,6 @@ def plot_mesh(V, E, title, save_path=None):
 
 def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
     print("# Performing local refinement on the mesh...", flush=True)
-    # Read the .gri file. There are two different functions to read the .gri file. The
-    # first one is from projection.py and the second one is from generate_matrices.py.
-    # We need both of them to get the edge midpoints and lengths.
     mesh = readgri(input_gri_file)
     mats = generate_matrices(input_gri_file)
    
@@ -59,20 +56,6 @@ def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
     V = mesh['V']     # 0-based indexing
     I2E = mats['I2E'] # 1-based indexing
     B2E = mats['B2E'] # 1-based indexing
-
-    # get the blade edges from B2E
-#    blade_edges = []
-#    for row in B2E:
-#        elem = row[0] - 1
-#        face = row[1]
-#        bgroup = row[2]
-#        n1 = E[elem, face-2]
-#        n2 = E[elem, face-3]
-#        if (bgroup == 2) or (bgroup == 6):
-#            blade_edges.append([n1, n2])
-#    blade_edges = np.array(blade_edges, dtype=int)
-#    blade_edge_coords = V[blade_edges]
-
 
     # populate an array the same shape as E with -1 to flag the edges with new nodes index
     flag = np.ones(E.shape, dtype=int) * (-1)
@@ -256,7 +239,6 @@ def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
     save_gri_file(output_gri_file, V, E+1, boundary_edges, periodic_pairs) # E has to be converted back to 1-based indexing
 
     return boundary_edges, periodic_pairs, len(new_nodes)
-#    return E, V, boundary_edges, periodic_pairs
 
 def smooth_mesh(input_gri_file, BG, PG, w=0.8, output_gri_file='smoothed.gri'):
     print("# Performing smoothing on the mesh...", flush=True)
@@ -378,6 +360,18 @@ def smooth_mesh(input_gri_file, BG, PG, w=0.8, output_gri_file='smoothed.gri'):
     return
     #return E, V, I2E, B2E
     
+
+def global_refinement(input_gri_file, output_gri_file='global_refined.gri'):
+    print("# Performing GLOBAL refinement on the mesh...", flush=True)
+    mesh = readgri(input_gri_file)
+    mats = generate_matrices(input_gri_file)
+   
+    # extract the necessary information from the mesh and matrices
+    E = mesh['E']     # 0-based indexing
+    V = mesh['V']     # 0-based indexing
+    I2E = mats['I2E'] # 1-based indexing
+    B2E = mats['B2E'] # 1-based indexing
+
 
 def save_gri_file(filename, nodes, elements, BG, PG):
     """

@@ -1,8 +1,20 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.tri as mtri
-import matplotlib.collections as mc
-import os
+from scipy.interpolate import CubicSpline
+
+# create blade geometry using cubic splines
+# Coordinates start and end at the trailing tip
+coords = np.loadtxt('../../data/blade.txt')
+# Calculate the distance between consecutive points
+ds = np.sqrt(np.sum(np.diff(coords, axis=0)**2, axis=1))
+# Create the parameter s (cumulative distance) starting at 0
+s = np.insert(np.cumsum(ds), 0, 0)
+# Create splines for x and y
+spline_x = CubicSpline(s, coords[:, 0], bc_type='periodic')
+spline_y = CubicSpline(s, coords[:, 1], bc_type='periodic')
+
 
 def read_gri(filename):
     with open(filename, 'r') as f:
@@ -75,7 +87,7 @@ def calcDist(P, A, B):
     t_clamped = np.clip(t, 0.0, 1.0)
     closest_point = A + t_clamped * AB
     distance = np.linalg.norm(P - closest_point)
-    return distance, closest_point
+    return distance, closest_point, np.sqrt(len_AB_sq)
 
 def calcProjection_multinodes(nodes, blade_segments):
     nNodes = len(nodes)
@@ -122,15 +134,27 @@ def read_blade_segments(bladeupper_filepath, bladelower_filepath):
 
 
 def calcProjection(P, blade_segments):
+    # find the closest point on the blade segments to P
     best_proj = np.array([np.nan, np.nan])
     min_dist = float('inf')
-    for seg in blade_segments:
-        dist, proj = calcDist(P, seg[0], seg[1])
+    lengths = []
+    i_best = None
+    for i, seg in enumerate(blade_segments):
+        dist, proj, seg_len = calcDist(P, seg[0], seg[1])
+        lengths.append(seg_len)
         if dist < min_dist:
             min_dist = dist
             best_proj = proj
-    xb = best_proj[0] # x-coordinate of the projection point
-    return min_dist, xb, best_proj
+            i_best = i
+    # snap the projection point from the blade segments to the spline curve
+    # sum the arc length all the way to the best projection point
+    arc_len = sum(lengths[:i_best]) + np.linalg.norm(best_proj - blade_segments[i_best][0])
+    xs, ys = spline_x(arc_len), spline_y(arc_len)
+    # shift the y-coordinate down by 18 units to align with the lower boundary
+    if abs(best_proj[1] - ys) > 17.: ys -= 18
+    spl_proj = np.array([xs, ys])
+    min_dist = np.linalg.norm(P - spl_proj)
+    return min_dist, xs, spl_proj
 
 # def sizing_function(d, xb):
 #     hmax = 0.15
@@ -160,7 +184,7 @@ def sizing_function_1(d, xb, xL, xT):
 
 def sizing_function_2(d, xb, xL, xT):
     hmin = 0.6
-    sigma = 11
+    sigma = 12
     delta = 11
 
     h = hmin * np.exp(-(xb-xL)*(xb-xT)/sigma**2) * np.exp(d/delta)
