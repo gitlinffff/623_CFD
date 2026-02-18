@@ -13,6 +13,7 @@
 #include "bc.hpp"
 #include <cmath>
 #include <cstring>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -133,6 +134,13 @@ double residual_L1_norm(const GriMesh& mesh, const double* R) {
     return sum;
 }
 
+double residual_L2_norm(const GriMesh& mesh, const double* R) {
+    double sum = 0.0;
+    for (int i = 0; i < mesh.Ne * 4; ++i)
+        sum += R[i] * R[i];
+    return std::sqrt(sum);
+}
+
 double compute_dt(const GriMesh& mesh, const double* U, double gamma, double CFL) {
     double h_min_sq = mesh.Area[0];
     for (int i = 1; i < mesh.Ne; ++i)
@@ -153,7 +161,12 @@ void solve_steady(const GriMesh& mesh, double* U, double gamma, const ProblemPar
     std::vector<double> R(mesh.Ne * 4);
     calcRes(mesh, U, R.data(), gamma, params, flux_fn, recon_fn);
     double R0 = residual_L1_norm(mesh, R.data());
-    std::cout << "Initial L1 residual: " << R0 << "\n";
+    double R0_L2 = residual_L2_norm(mesh, R.data());
+    std::cout << "Initial L1 residual: " << R0 << "  L2: " << R0_L2 << "\n";
+
+    std::ofstream hist("data/residual_history.dat");
+    if (hist.is_open())
+        hist << "# step  t  L1  L2  ratio\n";
 
     int step = 0;
     double t = 0.0;
@@ -166,10 +179,13 @@ void solve_steady(const GriMesh& mesh, double* U, double gamma, const ProblemPar
         if (residual_stride > 0 && step % residual_stride == 0) {
             calcRes(mesh, U, R.data(), gamma, params, flux_fn, recon_fn);
             double R1 = residual_L1_norm(mesh, R.data());
-            std::cout << "Step " << step << "  t=" << t << "  L1=" << R1;
+            double R1_L2 = residual_L2_norm(mesh, R.data());
+            std::cout << "Step " << step << "  t=" << t << "  L1=" << R1 << "  L2=" << R1_L2;
             if (R0 > 1e-30)
                 std::cout << "  ratio=" << (R1 / R0);
             std::cout << "\n";
+            if (hist.is_open())
+                hist << step << "  " << t << "  " << R1 << "  " << R1_L2 << "  " << (R0 > 1e-30 ? R1/R0 : 0.0) << "\n";
             if (R1 < R0 * 1e-5) {
                 std::cout << "Converged (L1 < 1e-5 * R0).\n";
                 break;
