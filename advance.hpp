@@ -16,13 +16,28 @@ typedef void (*FluxFn)(const double*, const double*, const double*, double, doub
  */
 void calcRes(const GriMesh& mesh, const double* U, double* R, double gamma,
             const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn,
-            double* dt_per_cell = nullptr, double CFL = 0.5);
+            double* dt_per_cell = nullptr, double CFL = 0.5, double t = -1.0);
 
-/** Advance U using SSP-RK3 with local time stepping. CFL used to compute dt per cell. */
-void SSPRK3(const GriMesh& mesh, double* U, double gamma,
-            const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn, double CFL = 0.5);
+/** SSP-RK3 with global dt (generic). Returns dt used. t: current time for time-dependent inflow. */
+double SSPRK3(const GriMesh& mesh, double* U, double gamma,
+              const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn,
+              double CFL, double t);
+
+/** SSP-RK3 with local time stepping (for steady-state convergence). */
+void SSPRK3_local(const GriMesh& mesh, double* U, double gamma,
+                  const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn,
+                  double CFL = 0.5);
+
+/** Unsteady solve: global dt, time-dependent inflow. Outputs to out_dir. */
+void solve_unsteady(const GriMesh& mesh, double* U, double gamma,
+                    const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn,
+                    double CFL, double t_end, double vtu_interval, int residual_stride,
+                    const char* out_dir);
 
 double residual_L1_norm(const GriMesh& mesh, const double* R);
+
+/** L2 norm of residual: sqrt(sum_i R_i^2) */
+double residual_L2_norm(const GriMesh& mesh, const double* R);
 
 /** Global CFL-based dt (for reference). Local time stepping uses dt_per_cell from calcRes. */
 double compute_dt(const GriMesh& mesh, const double* U, double gamma, double CFL);

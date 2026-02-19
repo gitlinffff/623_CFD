@@ -11,6 +11,7 @@
 #include "physics.hpp"
 #include "reconstruct.hpp"
 #include "bc.hpp"
+#include "write_vtu.hpp"
 #include <cmath>
 #include <cstring>
 #include <fstream>
@@ -20,7 +21,7 @@
 
 void calcRes(const GriMesh& mesh, const double* U, double* R, double gamma,
              const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn,
-             double* dt_per_cell, double CFL) {
+             double* dt_per_cell, double CFL, double t) {
     std::memset(R, 0, mesh.Ne * 4 * sizeof(double));
     std::vector<double> sum_s(mesh.Ne, 0.0);
 
@@ -70,8 +71,22 @@ void calcRes(const GriMesh& mesh, const double* U, double* R, double gamma,
         if (bt == BC_WALL)
             WallFlux(UL, n, gamma, Fhat, smag);
         else if (bt == BC_INFLOW) {
+            double rho0_in = params.rho0;
+            if (t >= 0.0) {
+                /* Unsteady: rho0(eta) = rho0*[1 - fwake*exp(-eta^2/(2*delta^2))] */
+                int elem = mesh.B2E[3 * i + 0];
+                int face = mesh.B2E[3 * i + 1];
+                int v0 = (face + 1) % 3, v1 = (face + 2) % 3;
+                int vid0 = mesh.E[elem * 3 + v0], vid1 = mesh.E[elem * 3 + v1];
+                double y_rot = 0.5 * (mesh.V[vid0 * 2 + 1] + mesh.V[vid1 * 2 + 1]);
+                double ystator = y_rot + params.Vrot * t;
+                double frac = ystator / params.delta_y - std::floor(ystator / params.delta_y);
+                double eta = frac - 0.5;
+                double fac = 1.0 - params.fwake * std::exp(-eta * eta / (2.0 * params.delta_wake * params.delta_wake));
+                rho0_in = params.rho0 * fac;
+            }
             try {
-                InflowFlux(UL, n, nin, params.rho0, params.a0, gamma, R_gas, flux_fn, Fhat, smag);
+                InflowFlux(UL, n, nin, rho0_in, params.a0, gamma, R_gas, flux_fn, Fhat, smag);
             } catch (const std::runtime_error&) {
                 flux_fn(UL, UL, n, gamma, Fhat, smag);
             }
@@ -98,8 +113,33 @@ void calcRes(const GriMesh& mesh, const double* U, double* R, double gamma,
     }
 }
 
-void SSPRK3(const GriMesh& mesh, double* U, double gamma,
-            const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn, double CFL) {
+double SSPRK3(const GriMesh& mesh, double* U, double gamma,
+              const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn,
+              double CFL, double t) {
+    std::vector<double> U1(mesh.Ne * 4);
+    std::vector<double> U2(mesh.Ne * 4);
+    std::vector<double> R(mesh.Ne * 4);
+    double dt = compute_dt(mesh, U, gamma, CFL);  /* global dt, same for all cells */
+
+    calcRes(mesh, U, R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t);
+    for (int i = 0; i < mesh.Ne; ++i)
+        for (int k = 0; k < 4; ++k)
+            U1[i * 4 + k] = U[i * 4 + k] + dt * R[i * 4 + k];
+
+    calcRes(mesh, U1.data(), R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t + dt);
+    for (int i = 0; i < mesh.Ne; ++i)
+        for (int k = 0; k < 4; ++k)
+            U2[i * 4 + k] = 0.75 * U[i * 4 + k] + 0.25 * (U1[i * 4 + k] + dt * R[i * 4 + k]);
+
+    calcRes(mesh, U2.data(), R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t + dt);
+    for (int i = 0; i < mesh.Ne; ++i)
+        for (int k = 0; k < 4; ++k)
+            U[i * 4 + k] = (1.0 / 3.0) * U[i * 4 + k] + (2.0 / 3.0) * (U2[i * 4 + k] + dt * R[i * 4 + k]);
+    return dt;
+}
+
+void SSPRK3_local(const GriMesh& mesh, double* U, double gamma,
+                  const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn, double CFL) {
     std::vector<double> U1(mesh.Ne * 4);
     std::vector<double> U2(mesh.Ne * 4);
     std::vector<double> R(mesh.Ne * 4);
@@ -172,7 +212,7 @@ void solve_steady(const GriMesh& mesh, double* U, double gamma, const ProblemPar
     double t = 0.0;
 
     while (step < max_iter) {
-        SSPRK3(mesh, U, gamma, params, flux_fn, recon_fn, CFL);
+        SSPRK3_local(mesh, U, gamma, params, flux_fn, recon_fn, CFL);
         t += compute_dt(mesh, U, gamma, CFL);
         step++;
 
@@ -192,4 +232,74 @@ void solve_steady(const GriMesh& mesh, double* U, double gamma, const ProblemPar
             }
         }
     }
+}
+
+void solve_unsteady(const GriMesh& mesh, double* U, double gamma,
+                    const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn,
+                    double CFL, double t_end, double vtu_interval, int residual_stride,
+                    const char* out_dir) {
+    std::vector<double> R(mesh.Ne * 4);
+    std::vector<double> vtu_times;
+    char path[512];
+
+    std::ofstream hist(std::string(out_dir) + "/residual_history.dat");
+    if (hist.is_open())
+        hist << "# step  t  L1  L2\n";
+
+    double t = 0.0;
+    int step = 0;
+    double next_vtu_t = vtu_interval;
+
+    /* Output initial */
+    std::snprintf(path, sizeof(path), "%s/solution_t_%06.2f.vtu", out_dir, t);
+    if (write_vtu(mesh, U, gamma, path))
+        vtu_times.push_back(t);
+
+    calcRes(mesh, U, R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t);
+    double R0 = residual_L1_norm(mesh, R.data());
+    std::cout << "Unsteady: t=" << t << "  L1=" << R0 << "\n";
+    if (hist.is_open())
+        hist << "0  " << t << "  " << R0 << "  " << residual_L2_norm(mesh, R.data()) << "\n";
+
+    while (t < t_end) {
+        double dt = SSPRK3(mesh, U, gamma, params, flux_fn, recon_fn, CFL, t);
+        t += dt;
+        step++;
+
+        if (residual_stride > 0 && step % residual_stride == 0) {
+            calcRes(mesh, U, R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t);
+            double R1 = residual_L1_norm(mesh, R.data());
+            double R1_L2 = residual_L2_norm(mesh, R.data());
+            std::cout << "  Step " << step << "  t=" << t << "  L1=" << R1 << "  L2=" << R1_L2 << "\n";
+            if (hist.is_open())
+                hist << step << "  " << t << "  " << R1 << "  " << R1_L2 << "\n";
+        }
+
+        if (t >= next_vtu_t - 1e-12 || t >= t_end - 1e-12) {
+            double out_t = (t >= t_end - 1e-12) ? t_end : next_vtu_t;
+            calcRes(mesh, U, R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t);
+            if (hist.is_open())
+                hist << step << "  " << t << "  " << residual_L1_norm(mesh, R.data()) << "  " << residual_L2_norm(mesh, R.data()) << "\n";
+            std::snprintf(path, sizeof(path), "%s/solution_t_%06.2f.vtu", out_dir, out_t);
+            if (write_vtu(mesh, U, gamma, path))
+                vtu_times.push_back(out_t);
+            next_vtu_t += vtu_interval;
+        }
+    }
+
+    /* Write PVD */
+    std::ofstream pvd(std::string(out_dir) + "/solution.pvd");
+    if (pvd.is_open()) {
+        pvd << "<?xml version=\"1.0\"?>\n";
+        pvd << "<VTKFile type=\"Collection\" version=\"1.0\">\n";
+        pvd << "  <Collection>\n";
+        for (size_t i = 0; i < vtu_times.size(); ++i) {
+            char fname[64];
+            std::snprintf(fname, sizeof(fname), "solution_t_%06.2f.vtu", vtu_times[i]);
+            pvd << "    <DataSet timestep=\"" << vtu_times[i] << "\" part=\"0\" file=\"" << fname << "\"/>\n";
+        }
+        pvd << "  </Collection>\n";
+        pvd << "</VTKFile>\n";
+    }
+    std::cout << "Unsteady done. Output: " << out_dir << "/ (" << vtu_times.size() << " VTU, solution.pvd)\n";
 }

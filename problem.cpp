@@ -13,6 +13,11 @@ ProblemParams::ProblemParams() {
     alpha = 50.0 * PI / 180.0;  /* 50 deg */
     double p0 = getp0(rho0, a0, gamma);
     pout = 0.7 * p0;
+    /* Unsteady wake (proj.pdf): Vrot=a0, delta_y=18mm, fwake=0.1, delta=0.1 */
+    Vrot = 1.0;
+    delta_y = 18;
+    fwake = 0.1;
+    delta_wake = 0.1;
 }
 
 double getp0(const ProblemParams& p) {

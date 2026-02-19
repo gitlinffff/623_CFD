@@ -9,6 +9,12 @@ struct ProblemParams {
     double alpha;  /**< Inlet angle of attack [rad] (50 deg) */
     double pout;   /**< Outflow static pressure (0.7 * p0) */
 
+    /** Unsteady wake inflow (proj.pdf): rho0(eta)=rho0*[1-fwake*exp(-eta^2/(2*delta^2))] */
+    double Vrot;       /**< Rotor speed = a0 */
+    double delta_y;    /**< Stator pitch, 18mm = 0.018 if mesh in m */
+    double fwake;     /**< Wake deficit strength, 0.1 */
+    double delta_wake; /**< Wake Gaussian width, 0.1 */
+
     /** Default: rho0=1, a0=1, gamma=1.4, alpha=50deg, pout=0.7*p0 */
     ProblemParams();
 };
