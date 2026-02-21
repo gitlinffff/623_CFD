@@ -131,21 +131,18 @@ double SSPRK3(const GriMesh& mesh, double* U, double gamma,
     for (int i = 0; i < mesh.Ne; ++i) {
         for (int k = 0; k < 4; ++k)
             U1[i * 4 + k] = U[i * 4 + k] + dt * R[i * 4 + k];
-        clip_cons_state(&U1[i * 4], gamma);
     }
 
     calcRes(mesh, U1.data(), R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t + dt);
     for (int i = 0; i < mesh.Ne; ++i) {
         for (int k = 0; k < 4; ++k)
             U2[i * 4 + k] = 0.75 * U[i * 4 + k] + 0.25 * (U1[i * 4 + k] + dt * R[i * 4 + k]);
-        clip_cons_state(&U2[i * 4], gamma);
     }
 
     calcRes(mesh, U2.data(), R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t + dt);
     for (int i = 0; i < mesh.Ne; ++i) {
         for (int k = 0; k < 4; ++k)
             U[i * 4 + k] = (1.0 / 3.0) * U[i * 4 + k] + (2.0 / 3.0) * (U2[i * 4 + k] + dt * R[i * 4 + k]);
-        clip_cons_state(&U[i * 4], gamma);
     }
     return dt;
 }

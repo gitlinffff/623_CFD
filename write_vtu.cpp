@@ -9,6 +9,7 @@
 #include <sstream>
 #include <cmath>
 #include <vector>
+#include <iostream>
 
 bool write_vtu(const GriMesh& mesh, const double* U, double gamma,
               const char* filepath) {
@@ -128,8 +129,11 @@ bool read_vtu(const GriMesh& mesh, const char* filepath, double gamma, double* U
         !parse_dataarray(content, "v", v) || !parse_dataarray(content, "p", p))
         return false;
     if ((int)rho.size() != mesh.Ne || (int)u.size() != mesh.Ne ||
-        (int)v.size() != mesh.Ne || (int)p.size() != mesh.Ne)
+        (int)v.size() != mesh.Ne || (int)p.size() != mesh.Ne) {
+        std::cerr << "Mesh mismatch: VTU has " << rho.size()
+                  << " cells, mesh has " << mesh.Ne << ".\n";
         return false;
+    }
 
     for (int i = 0; i < mesh.Ne; ++i) {
         double Ui[4];

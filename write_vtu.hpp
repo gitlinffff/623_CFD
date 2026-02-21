@@ -13,4 +13,12 @@
 bool write_vtu(const GriMesh& mesh, const double* U, double gamma,
               const char* filepath);
 
+/**
+ * Read cell-centered flow field from a VTU file written by write_vtu().
+ * Parses primitive variables (rho, u, v, p) and converts back to conserved U.
+ * U must be pre-allocated with size mesh.Ne * 4.
+ * Returns true on success; on failure U is unchanged.
+ */
+bool read_vtu(const GriMesh& mesh, const char* filepath, double gamma, double* U);
+
 #endif
