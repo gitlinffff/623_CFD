@@ -368,6 +368,101 @@ void reconstruct_MP(const GriMesh& mesh, const double* U,
     }
 }
 
+void reconstruct_LCD(const GriMesh& mesh, const double* U,
+                     double* UL_int, double* UR_int,
+                     double* UL_bnd, double* UR_bnd, double gamma) {
+    std::vector<double> gradU(mesh.Ne * 8);
+    compute_gradients(mesh, U, gradU.data());
+
+    /* (cell, face) -> neighbor cell index; -1 for boundary. */
+    std::vector<int> face_neighbor(mesh.Ne * 3, -1);
+    for (int f = 0; f < mesh.num_interior_faces; ++f) {
+        int elemL = mesh.I2E[4 * f + 0];
+        int faceL = mesh.I2E[4 * f + 1];
+        int elemR = mesh.I2E[4 * f + 2];
+        int faceR = mesh.I2E[4 * f + 3];
+        face_neighbor[elemL * 3 + faceL] = elemR;
+        face_neighbor[elemR * 3 + faceR] = elemL;
+    }
+
+    std::vector<double> cx(mesh.Ne), cy(mesh.Ne);
+    for (int i = 0; i < mesh.Ne; ++i)
+        cell_centroid(mesh, i, cx[i], cy[i]);
+
+    /* LCD: α_cell = min over edges α_k; L_LCD = α_cell * L̃. Bounds per edge k: [min(u₀, u_k), max(u₀, u_k)]. */
+    std::vector<double> alpha_cell(mesh.Ne, 1.0);
+    for (int i = 0; i < mesh.Ne; ++i) {
+        double alpha = 1.0;
+        for (int j = 0; j < 3; ++j) {
+            int nb = face_neighbor[i * 3 + j];
+            double alpha_k = 1.0;
+            if (nb >= 0) {
+                double fx, fy;
+                interior_face_centroid(mesh, i, j, fx, fy);
+                double dx = fx - cx[i], dy = fy - cy[i];
+                for (int k = 0; k < 4; ++k) {
+                    double u0 = U[i * 4 + k];
+                    double u_nb = U[nb * 4 + k];
+                    double u_min = std::min(u0, u_nb);
+                    double u_max = std::max(u0, u_nb);
+                    double delta = gradU[i * 8 + k * 2 + 0] * dx + gradU[i * 8 + k * 2 + 1] * dy;
+                    double u_face = u0 + delta;
+                    double a = 1.0;
+                    if (delta > 1e-14)
+                        a = (u_max - u0) / delta;
+                    else if (delta < -1e-14)
+                        a = (u_min - u0) / delta;
+                    a = std::max(0.0, std::min(1.0, a));
+                    alpha_k = std::min(alpha_k, a);
+                }
+            }
+            alpha = std::min(alpha, alpha_k);
+        }
+        alpha_cell[i] = alpha;
+    }
+
+    /* Limited gradient: L_LCD = α * L̃ (direction preserved, magnitude scaled). */
+    std::vector<double> gradU_lim(mesh.Ne * 8);
+    for (int i = 0; i < mesh.Ne; ++i) {
+        double a = alpha_cell[i];
+        for (int k = 0; k < 4; ++k) {
+            gradU_lim[i * 8 + k * 2 + 0] = a * gradU[i * 8 + k * 2 + 0];
+            gradU_lim[i * 8 + k * 2 + 1] = a * gradU[i * 8 + k * 2 + 1];
+        }
+    }
+
+    /* Same extrapolation as nolimiter; fallback to cell average if invalid. */
+    auto extrapolate = [&](int elem, double fx, double fy, double* Uface) {
+        double dx = fx - cx[elem], dy = fy - cy[elem];
+        const double* g = &gradU_lim[elem * 8];
+        for (int k = 0; k < 4; ++k) {
+            Uface[k] = U[elem * 4 + k] + g[k * 2 + 0] * dx + g[k * 2 + 1] * dy;
+        }
+        if (!is_valid_state(Uface, gamma))
+            std::memcpy(Uface, &U[elem * 4], 4 * sizeof(double));
+    };
+
+    for (int i = 0; i < mesh.num_interior_faces; ++i) {
+        int elemL = mesh.I2E[4 * i + 0];
+        int elemR = mesh.I2E[4 * i + 2];
+        double fx_L, fy_L;
+        interior_face_centroid(mesh, elemL, mesh.I2E[4 * i + 1], fx_L, fy_L);
+        extrapolate(elemL, fx_L, fy_L, &UL_int[i * 4]);
+        double fx_R, fy_R;
+        interior_face_centroid(mesh, elemR, mesh.I2E[4 * i + 3], fx_R, fy_R);
+        extrapolate(elemR, fx_R, fy_R, &UR_int[i * 4]);
+    }
+
+    for (int i = 0; i < mesh.num_boundary_faces; ++i) {
+        int elem = mesh.B2E[3 * i + 0];
+        int face = mesh.B2E[3 * i + 1];
+        double fx, fy;
+        boundary_face_centroid(mesh, elem, face, fx, fy);
+        extrapolate(elem, fx, fy, &UL_bnd[i * 4]);
+        std::memcpy(&UR_bnd[i * 4], &U[elem * 4], 4 * sizeof(double));
+    }
+}
+
 void clip_cons_state(double U[4], double gamma) {
     double rho, u, v, p, c;
     consToPrim(U, gamma, rho, u, v, p, c);

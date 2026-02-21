@@ -31,7 +31,7 @@ int main() {
 
     const double gamma = 1.4;
     FluxFn flux_fn = fluxROE;
-    ReconFn recon_fn = reconstruct_MP;
+    ReconFn recon_fn = reconstruct_LCD;
 
     ProblemParams params;
     std::vector<double> U(mesh.Ne * 4);
@@ -45,7 +45,7 @@ int main() {
     ensure_dir("data/results-2");
 
     /* 1st order for 33800 steps, then 2nd order (recon_fn) until convergence */
-    solve_steady_2nd(mesh, U.data(), gamma, params, flux_fn, recon_fn, 0.1, 50, 100000, 33800);
+    solve_steady_2nd(mesh, U.data(), gamma, params, flux_fn, recon_fn, 0.1, 50, 100000, 30000);
 
     const char* out_path = "data/results/solution.vtu";
     if (write_vtu(mesh, U.data(), gamma, out_path))

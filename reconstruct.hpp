@@ -43,6 +43,16 @@ void reconstruct_MP(const GriMesh& mesh, const double* U,
                     double* UL_int, double* UR_int,
                     double* UL_bnd, double* UR_bnd, double gamma);
 
+/**
+ * Second-order linear reconstruction with LCD (Limited Central Difference) limiter.
+ * Uses one unlimited gradient L̃; for each edge k computes α_k so that edge-midpoint
+ * values lie in [min(u_k, u₀), max(u_k, u₀)]; then L_LCD = (min_k α_k) * L̃.
+ * Gradient direction preserved, only magnitude reduced. Robust and cheap, but diffusive.
+ */
+void reconstruct_LCD(const GriMesh& mesh, const double* U,
+                     double* UL_int, double* UR_int,
+                     double* UL_bnd, double* UR_bnd, double gamma);
+
 /** Clip U to valid physical bounds (rho>0, p>0, finite). Call after time update to prevent blow-up. */
 void clip_cons_state(double U[4], double gamma);
 
