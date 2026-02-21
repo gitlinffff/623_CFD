@@ -13,6 +13,12 @@
 #include "bc.hpp"
 #include "write_vtu.hpp"
 #include <cmath>
+#include <cstdio>
+#ifdef _WIN32
+#include <direct.h>
+#else
+#include <sys/stat.h>
+#endif
 #include <cstring>
 #include <fstream>
 #include <iostream>
@@ -30,7 +36,7 @@ void calcRes(const GriMesh& mesh, const double* U, double* R, double gamma,
     std::vector<double> UL_bnd(mesh.num_boundary_faces * 4);
     std::vector<double> UR_bnd(mesh.num_boundary_faces * 4);
 
-    recon_fn(mesh, U, UL_int.data(), UR_int.data(), UL_bnd.data(), UR_bnd.data());
+    recon_fn(mesh, U, UL_int.data(), UR_int.data(), UL_bnd.data(), UR_bnd.data(), gamma);
 
     double Fhat[4];
     double smag;
@@ -122,19 +128,25 @@ double SSPRK3(const GriMesh& mesh, double* U, double gamma,
     double dt = compute_dt(mesh, U, gamma, CFL);  /* global dt, same for all cells */
 
     calcRes(mesh, U, R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t);
-    for (int i = 0; i < mesh.Ne; ++i)
+    for (int i = 0; i < mesh.Ne; ++i) {
         for (int k = 0; k < 4; ++k)
             U1[i * 4 + k] = U[i * 4 + k] + dt * R[i * 4 + k];
+        clip_cons_state(&U1[i * 4], gamma);
+    }
 
     calcRes(mesh, U1.data(), R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t + dt);
-    for (int i = 0; i < mesh.Ne; ++i)
+    for (int i = 0; i < mesh.Ne; ++i) {
         for (int k = 0; k < 4; ++k)
             U2[i * 4 + k] = 0.75 * U[i * 4 + k] + 0.25 * (U1[i * 4 + k] + dt * R[i * 4 + k]);
+        clip_cons_state(&U2[i * 4], gamma);
+    }
 
     calcRes(mesh, U2.data(), R.data(), gamma, params, flux_fn, recon_fn, nullptr, CFL, t + dt);
-    for (int i = 0; i < mesh.Ne; ++i)
+    for (int i = 0; i < mesh.Ne; ++i) {
         for (int k = 0; k < 4; ++k)
             U[i * 4 + k] = (1.0 / 3.0) * U[i * 4 + k] + (2.0 / 3.0) * (U2[i * 4 + k] + dt * R[i * 4 + k]);
+        clip_cons_state(&U[i * 4], gamma);
+    }
     return dt;
 }
 
@@ -201,12 +213,7 @@ void solve_steady(const GriMesh& mesh, double* U, double gamma, const ProblemPar
     std::vector<double> R(mesh.Ne * 4);
     calcRes(mesh, U, R.data(), gamma, params, flux_fn, recon_fn);
     double R0 = residual_L1_norm(mesh, R.data());
-    double R0_L2 = residual_L2_norm(mesh, R.data());
-    std::cout << "Initial L1 residual: " << R0 << "  L2: " << R0_L2 << "\n";
-
-    std::ofstream hist("data/residual_history.dat");
-    if (hist.is_open())
-        hist << "# step  t  L1  L2  ratio\n";
+    std::cout << "Initial L1 residual: " << R0 << "\n";
 
     int step = 0;
     double t = 0.0;
@@ -219,13 +226,10 @@ void solve_steady(const GriMesh& mesh, double* U, double gamma, const ProblemPar
         if (residual_stride > 0 && step % residual_stride == 0) {
             calcRes(mesh, U, R.data(), gamma, params, flux_fn, recon_fn);
             double R1 = residual_L1_norm(mesh, R.data());
-            double R1_L2 = residual_L2_norm(mesh, R.data());
-            std::cout << "Step " << step << "  t=" << t << "  L1=" << R1 << "  L2=" << R1_L2;
+            std::cout << "Step " << step << "  t=" << t << "  L1=" << R1;
             if (R0 > 1e-30)
                 std::cout << "  ratio=" << (R1 / R0);
             std::cout << "\n";
-            if (hist.is_open())
-                hist << step << "  " << t << "  " << R1 << "  " << R1_L2 << "  " << (R0 > 1e-30 ? R1/R0 : 0.0) << "\n";
             if (R1 < R0 * 1e-5) {
                 std::cout << "Converged (L1 < 1e-5 * R0).\n";
                 break;

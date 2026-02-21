@@ -45,7 +45,7 @@ double compute_dt(const GriMesh& mesh, const double* U, double gamma, double CFL
 /**
  * Steady-state solve: SSP-RK3 until L1 residual drops 5 orders below initial.
  * flux_fn: fluxROE, fluxHLLC, or fluxRusanov
- * recon_fn: reconstruct_const or other reconstruction
+ * recon_fn: reconstruct_const or reconstruct_nolimiter
  */
 void solve_steady(const GriMesh& mesh, double* U, double gamma, const ProblemParams& params,
                   FluxFn flux_fn, ReconFn recon_fn, double CFL = 0.1, int residual_stride = 50,

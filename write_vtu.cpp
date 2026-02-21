@@ -97,6 +97,7 @@ bool write_vtu(const GriMesh& mesh, const double* U, double gamma,
 }
 
 namespace {
+
 bool parse_dataarray(const std::string& content, const char* name, std::vector<double>& out) {
     std::string tag = "Name=\"" + std::string(name) + "\"";
     size_t pos = content.find(tag);
