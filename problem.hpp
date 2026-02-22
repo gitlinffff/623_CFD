@@ -5,7 +5,7 @@
 struct ProblemParams {
     double rho0;   /**< Inlet stagnation density (e.g. 1) */
     double a0;     /**< Inlet stagnation speed of sound (e.g. 1) */
-    double gamma;  /**< Ratio of specific heats (1.4) */
+    double gammad;  /**< Ratio of specific heats (1.4) */
     double alpha;  /**< Inlet angle of attack [rad] (50 deg) */
     double pout;   /**< Outflow static pressure (0.7 * p0) */
 
@@ -15,7 +15,7 @@ struct ProblemParams {
     double fwake;     /**< Wake deficit strength, 0.1 */
     double delta_wake; /**< Wake Gaussian width, 0.1 */
 
-    /** Default: rho0=1, a0=1, gamma=1.4, alpha=50deg, pout=0.7*p0 */
+    /** Default: rho0=1, a0=1, gammad=1.4, alpha=50deg, pout=0.7*p0 */
     ProblemParams();
 };
 

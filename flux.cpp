@@ -2,18 +2,19 @@
 #include "physics.hpp"
 #include <cmath>
 #include <algorithm>
+#include <stdexcept>
 
 namespace {
 const double eps = 1e-14;
 const double kappa = 0.1;
 }
 
-void fluxRusanov(const double UL[4], const double UR[4], const double n[2], double gamma,
+void fluxRusanov(const double UL[4], const double UR[4], const double n[2], double gammad,
              double Fhat[4], double& smag) {
     double rhoL, uL, vL, pL, cL;
     double rhoR, uR, vR, pR, cR;
-    consToPrim(UL, gamma, rhoL, uL, vL, pL, cL);
-    consToPrim(UR, gamma, rhoR, uR, vR, pR, cR);
+    consToPrim(UL, gammad, rhoL, uL, vL, pL, cL);
+    consToPrim(UR, gammad, rhoR, uR, vR, pR, cR);
 
     double nx = n[0];
     double ny = n[1];
@@ -25,24 +26,24 @@ void fluxRusanov(const double UL[4], const double UR[4], const double n[2], doub
     smag = alpha;
 
     double FL[4], FR[4];
-    physicalFlux(UL, n, gamma, FL);
-    physicalFlux(UR, n, gamma, FR);
+    physicalFlux(UL, n, gammad, FL);
+    physicalFlux(UR, n, gammad, FR);
 
     for (int k = 0; k < 4; ++k)
         Fhat[k] = 0.5 * (FL[k] + FR[k]) - 0.5 * alpha * (UR[k] - UL[k]);
 }
 
 
-void fluxHLLC(const double UL[4], const double UR[4], const double n[2], double gamma,
+void fluxHLLC(const double UL[4], const double UR[4], const double n[2], double gammad,
           double Fhat[4], double& smag) {
     double rhoL, uL, vL, pL, cL;
     double rhoR, uR, vR, pR, cR;
-    consToPrim(UL, gamma, rhoL, uL, vL, pL, cL);
-    consToPrim(UR, gamma, rhoR, uR, vR, pR, cR);
+    consToPrim(UL, gammad, rhoL, uL, vL, pL, cL);
+    consToPrim(UR, gammad, rhoR, uR, vR, pR, cR);
 
     double FL[4], FR[4];
-    physicalFlux(UL, n, gamma, FL);
-    physicalFlux(UR, n, gamma, FR);
+    physicalFlux(UL, n, gammad, FL);
+    physicalFlux(UR, n, gammad, FR);
 
     double nx = n[0];
     double ny = n[1];
@@ -102,7 +103,7 @@ void fluxHLLC(const double UL[4], const double UR[4], const double n[2], double 
 }
 
 
-void fluxROE(const double UL[4], const double UR[4], const double n[2], double gamma,
+void fluxROE(const double UL[4], const double UR[4], const double n[2], double gammad,
          double Fhat[4], double& smag) {
     double nx = n[0];
     double ny = n[1];
@@ -110,8 +111,8 @@ void fluxROE(const double UL[4], const double UR[4], const double n[2], double g
     double rhoL, uL, vL, pL, cL;
     double rhoR, uR, vR, pR, cR;
 
-    consToPrim(UL, gamma, rhoL, uL, vL, pL, cL);
-    consToPrim(UR, gamma, rhoR, uR, vR, pR, cR);
+    consToPrim(UL, gammad, rhoL, uL, vL, pL, cL);
+    consToPrim(UR, gammad, rhoR, uR, vR, pR, cR);
 
     double unL = uL * nx + vL * ny;
     double utL = -uL * ny + vL * nx;
@@ -130,7 +131,7 @@ void fluxROE(const double UL[4], const double UR[4], const double n[2], double g
     double ut_tilde = (sqrt_rhoL * utL + sqrt_rhoR * utR) / denom;
     double H_tilde = (sqrt_rhoL * HL + sqrt_rhoR * HR) / denom;
 
-    double c_tilde_sq = (gamma - 1.0) * (H_tilde - 0.5 * (un_tilde * un_tilde + ut_tilde * ut_tilde));
+    double c_tilde_sq = (gammad - 1.0) * (H_tilde - 0.5 * (un_tilde * un_tilde + ut_tilde * ut_tilde));
     if (c_tilde_sq < eps) c_tilde_sq = eps;
     double c_tilde = std::sqrt(c_tilde_sq);
 
@@ -174,24 +175,24 @@ void fluxROE(const double UL[4], const double UR[4], const double n[2], double g
     D[3] = d3;
 
     double FL[4], FR[4];
-    physicalFlux(UL, n, gamma, FL);
-    physicalFlux(UR, n, gamma, FR);
+    physicalFlux(UL, n, gammad, FL);
+    physicalFlux(UR, n, gammad, FR);
 
     for (int k = 0; k < 4; ++k)
         Fhat[k] = 0.5 * (FL[k] + FR[k]) - 0.5 * D[k];
 }
 
 
-void WallFlux(const double UL[4], const double n[2], double gamma,
+void WallFlux(const double UL[4], const double n[2], double gammad,
          double Fhat[4], double& smag){
     double rhoL, uL, vL, pL, cL;
-    consToPrim(UL, gamma, rhoL, uL, vL, pL, cL);
+    consToPrim(UL, gammad, rhoL, uL, vL, pL, cL);
 
     double ub[2];
     double pb;
     ub[0] = uL - (uL*n[0] + vL*n[1])*n[0];
     ub[1] = vL - (uL*n[0] + vL*n[1])*n[1];
-    pb = (gamma - 1) * (UL[3] - 0.5*rhoL*(ub[0]*ub[0] + ub[1]*ub[1]));
+    pb = (gammad - 1) * (UL[3] - 0.5*rhoL*(ub[0]*ub[0] + ub[1]*ub[1]));
     
     Fhat[0] = 0.0;
     Fhat[1] = pb*n[0];
@@ -202,21 +203,21 @@ void WallFlux(const double UL[4], const double n[2], double gamma,
 
 
 void InflowFlux(const double UL[4], const double n[2], const double nin[2],
-                double rho0, double a0, double gamma, double R,
+                double rho0, double a0, double gammad, double R,
                 void (*FluxFunction)(const double*, const double*, const double*, double, double*, double&),
                 double Fhat[4], double& smag){
-    const double pt = rho0 * a0 * a0 / gamma;
-    const double Tt = (a0 * a0) / (gamma * R);
+    const double pt = rho0 * a0 * a0 / gammad;
+    const double Tt = (a0 * a0) / (gammad * R);
 
     double rhoL, uL, vL, pL, cL;
-    consToPrim(UL, gamma, rhoL, uL, vL, pL, cL);
+    consToPrim(UL, gammad, rhoL, uL, vL, pL, cL);
 
-    double Jplus = (uL*n[0] +vL*n[1]) + 2*cL/(gamma - 1);
+    double Jplus = (uL*n[0] +vL*n[1]) + 2*cL/(gammad - 1);
     double dn = n[0]*nin[0] + n[1]*nin[1];
     
-    double A = gamma*R*Tt*dn*dn - 0.5*(gamma - 1)*Jplus*Jplus;
-    double B = 4*gamma*R*Tt*dn/(gamma - 1);
-    double C = 4*gamma*R*Tt/((gamma-1)*(gamma-1)) - Jplus*Jplus;
+    double A = gammad*R*Tt*dn*dn - 0.5*(gammad - 1)*Jplus*Jplus;
+    double B = 4*gammad*R*Tt*dn/(gammad - 1);
+    double C = 4*gammad*R*Tt/((gammad-1)*(gammad-1)) - Jplus*Jplus;
 
     double delta = B*B - 4*A*C;
     if (delta < 0) {
@@ -236,12 +237,12 @@ void InflowFlux(const double UL[4], const double n[2], const double nin[2],
     else
             throw std::runtime_error("Inflow BC: no physical Mach root");
     
-    const double Tb  = Tt / (1.0 + 0.5*(gamma - 1.0)*Mb*Mb);
+    const double Tb  = Tt / (1.0 + 0.5*(gammad - 1.0)*Mb*Mb);
 
-    const double pb = pt * std::pow(Tb / Tt, gamma/(gamma - 1.0));
+    const double pb = pt * std::pow(Tb / Tt, gammad/(gammad - 1.0));
 
     const double rhob = pb / (R * Tb);
-    const double cb   = std::sqrt(std::max(0.0, gamma*pb/rhob));
+    const double cb   = std::sqrt(std::max(0.0, gammad*pb/rhob));
 
     const double ub = Mb * cb * nin[0];
     const double vb = Mb * cb * nin[1];
@@ -250,68 +251,68 @@ void InflowFlux(const double UL[4], const double n[2], const double nin[2],
     Ub[0] = rhob;
     Ub[1] = rhob * ub;
     Ub[2] = rhob * vb;
-    Ub[3] = pb/(gamma - 1.0) + 0.5*rhob*(ub*ub + vb*vb);
+    Ub[3] = pb/(gammad - 1.0) + 0.5*rhob*(ub*ub + vb*vb);
 
-    FluxFunction(UL, Ub, n, gamma, Fhat, smag);
+    FluxFunction(UL, Ub, n, gammad, Fhat, smag);
 }
 
 
 // test use
 void InflowFlux_compute_Ub(const double UL[4], const double n[2], const double nin[2],
-                           double rho0, double a0, double gamma, double R, double Ub[4]) {
-    const double pt = rho0 * a0 * a0 / gamma;
-    const double Tt = (a0 * a0) / (gamma * R);
+                           double rho0, double a0, double gammad, double R, double Ub[4]) {
+    const double pt = rho0 * a0 * a0 / gammad;
+    const double Tt = (a0 * a0) / (gammad * R);
     double rhoL, uL, vL, pL, cL;
-    consToPrim(UL, gamma, rhoL, uL, vL, pL, cL);
-    double Jplus = (uL*n[0] + vL*n[1]) + 2*cL/(gamma - 1);
+    consToPrim(UL, gammad, rhoL, uL, vL, pL, cL);
+    double Jplus = (uL*n[0] + vL*n[1]) + 2*cL/(gammad - 1);
     double dn = n[0]*nin[0] + n[1]*nin[1];
-    double A = gamma*R*Tt*dn*dn - 0.5*(gamma - 1)*Jplus*Jplus;
-    double B = 4*gamma*R*Tt*dn/(gamma - 1);
-    double C = 4*gamma*R*Tt/((gamma-1)*(gamma-1)) - Jplus*Jplus;
+    double A = gammad*R*Tt*dn*dn - 0.5*(gammad - 1)*Jplus*Jplus;
+    double B = 4*gammad*R*Tt*dn/(gammad - 1);
+    double C = 4*gammad*R*Tt/((gammad-1)*(gammad-1)) - Jplus*Jplus;
     double delta = B*B - 4*A*C;
     if (delta < 0) throw std::runtime_error("InflowFlux_compute_Ub: negative discriminant");
     double Mb1 = (-B - std::sqrt(delta))/(2*A);
     double Mb2 = (-B + std::sqrt(delta))/(2*A);
     double Mb = (Mb1 >= 0 && Mb2 >= 0) ? std::min(Mb1, Mb2) : (Mb1 >= 0 ? Mb1 : Mb2);
     if (Mb < 0) throw std::runtime_error("InflowFlux_compute_Ub: no physical Mach root");
-    const double Tb = Tt / (1.0 + 0.5*(gamma - 1.0)*Mb*Mb);
-    const double pb = pt * std::pow(Tb / Tt, gamma/(gamma - 1.0));
+    const double Tb = Tt / (1.0 + 0.5*(gammad - 1.0)*Mb*Mb);
+    const double pb = pt * std::pow(Tb / Tt, gammad/(gammad - 1.0));
     const double rhob = pb / (R * Tb);
-    const double cb = std::sqrt(std::max(0.0, gamma*pb/rhob));
+    const double cb = std::sqrt(std::max(0.0, gammad*pb/rhob));
     const double vb0 = Mb * cb * nin[0];
     const double vb1 = Mb * cb * nin[1];
     Ub[0] = rhob;
     Ub[1] = rhob * vb0;
     Ub[2] = rhob * vb1;
-    Ub[3] = pb/(gamma - 1.0) + 0.5*rhob*(vb0*vb0 + vb1*vb1);
+    Ub[3] = pb/(gammad - 1.0) + 0.5*rhob*(vb0*vb0 + vb1*vb1);
 }
 
 void OutflowFlux(const double UL[4], const double n[2],
-                double pout, double gamma,
+                double pout, double gammad,
                 void (*FluxFunction)(const double*, const double*, const double*, double, double*, double&),
                 double Fhat[4], double& smag){
 
     double rhoL, uL, vL, pL, cL;
-    consToPrim(UL, gamma, rhoL, uL, vL, pL, cL);
+    consToPrim(UL, gammad, rhoL, uL, vL, pL, cL);
 
     if (rhoL <= 0)
         throw std::runtime_error("Outflow BC: negative density");
     
     double unL = uL*n[0] + vL*n[1];
-    double Jplus = unL + 2*cL/(gamma - 1);
+    double Jplus = unL + 2*cL/(gammad - 1);
 
-    double Splus = pL/std::pow(rhoL, gamma);
+    double Splus = pL/std::pow(rhoL, gammad);
     if (Splus <= 0)
         throw std::runtime_error("Outflow BC: negative entropy");
 
     double pb = pout;
-    double rhob = std::pow((pb/Splus),1.0/gamma);
+    double rhob = std::pow((pb/Splus),1.0/gammad);
     if (rhob <= 0)
         throw std::runtime_error("Outflow BC: negative boundary density");
 
-    double cb = std::sqrt(gamma*pb/rhob);
+    double cb = std::sqrt(gammad*pb/rhob);
 
-    double unb = Jplus - 2*cb/(gamma - 1);
+    double unb = Jplus - 2*cb/(gammad - 1);
     double ub = uL - unL*n[0] + unb*n[0];
     double vb = vL - unL*n[1] + unb*n[1];
 
@@ -320,27 +321,27 @@ void OutflowFlux(const double UL[4], const double n[2],
     Ub[0] = rhob;
     Ub[1] = rhob * ub;
     Ub[2] = rhob * vb;
-    Ub[3] = pb/(gamma - 1.0) + 0.5*rhob*(ub*ub + vb*vb);
+    Ub[3] = pb/(gammad - 1.0) + 0.5*rhob*(ub*ub + vb*vb);
 
-    FluxFunction(UL, Ub, n, gamma, Fhat, smag);
+    FluxFunction(UL, Ub, n, gammad, Fhat, smag);
 }
 
 // test use
 void OutflowFlux_compute_Ub(const double UL[4], const double n[2], double pout,
-                            double gamma, double Ub[4]) {
+                            double gammad, double Ub[4]) {
     double rhoL, uL, vL, pL, cL;
-    consToPrim(UL, gamma, rhoL, uL, vL, pL, cL);
+    consToPrim(UL, gammad, rhoL, uL, vL, pL, cL);
     double unL = uL*n[0] + vL*n[1];
-    double Jplus = unL + 2*cL/(gamma - 1);
-    double Splus = pL/std::pow(rhoL, gamma);
+    double Jplus = unL + 2*cL/(gammad - 1);
+    double Splus = pL/std::pow(rhoL, gammad);
     double pb = pout;
-    double rhob = std::pow((pb/Splus), 1.0/gamma);
-    double cb = std::sqrt(gamma*pb/rhob);
-    double unb = Jplus - 2*cb/(gamma - 1);
+    double rhob = std::pow((pb/Splus), 1.0/gammad);
+    double cb = std::sqrt(gammad*pb/rhob);
+    double unb = Jplus - 2*cb/(gammad - 1);
     double ub = uL - unL*n[0] + unb*n[0];
     double vb = vL - unL*n[1] + unb*n[1];
     Ub[0] = rhob;
     Ub[1] = rhob * ub;
     Ub[2] = rhob * vb;
-    Ub[3] = pb/(gamma - 1.0) + 0.5*rhob*(ub*ub + vb*vb);
+    Ub[3] = pb/(gammad - 1.0) + 0.5*rhob*(ub*ub + vb*vb);
 }

@@ -30,10 +30,10 @@ void boundary_face_centroid(const GriMesh& mesh, int elem, int face, double& fx,
     fy = 0.5 * (mesh.V[v0 * 2 + 1] + mesh.V[v1 * 2 + 1]);
 }
 
-bool is_valid_state(const double U[4], double gamma) {
+bool is_valid_state(const double U[4], double gammad) {
     if (U[0] <= 0.0) return false;
     double rho, u, v, p, c;
-    consToPrim(U, gamma, rho, u, v, p, c);
+    consToPrim(U, gammad, rho, u, v, p, c);
     return (rho > 0.0 && p > 0.0 && std::isfinite(rho) && std::isfinite(p));
 }
 
@@ -41,7 +41,7 @@ bool is_valid_state(const double U[4], double gamma) {
 
 void reconstruct_const(const GriMesh& mesh, const double* U,
                       double* UL_int, double* UR_int,
-                      double* UL_bnd, double* UR_bnd, double /*gamma*/) {
+                      double* UL_bnd, double* UR_bnd, double /*gammad*/) {
     for (int i = 0; i < mesh.num_interior_faces; ++i) {
         int elemL = mesh.I2E[4 * i + 0];
         int elemR = mesh.I2E[4 * i + 2];
@@ -130,7 +130,7 @@ void compute_gradients(const GriMesh& mesh, const double* U, double* gradU) {
 
 void reconstruct_nolimiter(const GriMesh& mesh, const double* U,
                                 double* UL_int, double* UR_int,
-                                double* UL_bnd, double* UR_bnd, double gamma) {
+                                double* UL_bnd, double* UR_bnd, double gammad) {
     std::vector<double> gradU(mesh.Ne * 8);
     compute_gradients(mesh, U, gradU.data());
 
@@ -144,7 +144,7 @@ void reconstruct_nolimiter(const GriMesh& mesh, const double* U,
             Uface[k] = U[elem * 4 + k] + gradU[elem * 8 + k * 2 + 0] * dx
                                            + gradU[elem * 8 + k * 2 + 1] * dy;
         }
-        if (!is_valid_state(Uface, gamma))
+        if (!is_valid_state(Uface, gammad))
             std::memcpy(Uface, &U[elem * 4], 4 * sizeof(double));
     };
 
@@ -173,10 +173,10 @@ void reconstruct_nolimiter(const GriMesh& mesh, const double* U,
     }
 }
 
-void clip_cons_state(double U[4], double gamma) {
+void clip_cons_state(double U[4], double gammad) {
     double rho, u, v, p, c;
-    consToPrim(U, gamma, rho, u, v, p, c);
+    consToPrim(U, gammad, rho, u, v, p, c);
     if (rho <= 0.0 || !std::isfinite(rho)) rho = 1e-12;
     if (p <= 0.0 || !std::isfinite(p)) p = 1e-12;
-    primToCons(rho, u, v, p, gamma, U);
+    primToCons(rho, u, v, p, gammad, U);
 }

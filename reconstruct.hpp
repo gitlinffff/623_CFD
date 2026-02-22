@@ -3,10 +3,10 @@
 
 #include "readgri.hpp"
 
-/** Reconstruction function: recon(mesh, U, UL_int, UR_int, UL_bnd, UR_bnd, gamma) */
+/** Reconstruction function: recon(mesh, U, UL_int, UR_int, UL_bnd, UR_bnd, gammad) */
 typedef void (*ReconFn)(const GriMesh& mesh, const double* U,
                        double* UL_int, double* UR_int,
-                       double* UL_bnd, double* UR_bnd, double gamma);
+                       double* UL_bnd, double* UR_bnd, double gammad);
 
 /**
  * No reconstruction (constant / Godunov): UL = U[elemL], UR = U[elemR].
@@ -14,7 +14,7 @@ typedef void (*ReconFn)(const GriMesh& mesh, const double* U,
  */
 void reconstruct_const(const GriMesh& mesh, const double* U,
                       double* UL_int, double* UR_int,
-                      double* UL_bnd, double* UR_bnd, double gamma);
+                      double* UL_bnd, double* UR_bnd, double gammad);
 
 /**
  * Second-order linear reconstruction without limiter.
@@ -22,9 +22,9 @@ void reconstruct_const(const GriMesh& mesh, const double* U,
  */
 void reconstruct_nolimiter(const GriMesh& mesh, const double* U,
                            double* UL_int, double* UR_int,
-                           double* UL_bnd, double* UR_bnd, double gamma);
+                           double* UL_bnd, double* UR_bnd, double gammad);
 
 /** Clip U to valid physical bounds (rho>0, p>0, finite). Call after time update to prevent blow-up. */
-void clip_cons_state(double U[4], double gamma);
+void clip_cons_state(double U[4], double gammad);
 
 #endif

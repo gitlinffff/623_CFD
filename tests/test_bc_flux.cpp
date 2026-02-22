@@ -9,7 +9,7 @@
 #include <cstdio>
 #include <stdexcept>
 
-static const double gamma = 1.4;
+static const double gammad = 1.4;
 static const double tol = 1e-10;
 static const double tol_machine = 1e-14;  /* machine precision for exactness tests */
 
@@ -17,7 +17,7 @@ static void U_from_prim(double rho, double u, double v, double p, double U[4]) {
     U[0] = rho;
     U[1] = rho * u;
     U[2] = rho * v;
-    U[3] = p / (gamma - 1.0) + 0.5 * rho * (u * u + v * v);
+    U[3] = p / (gammad - 1.0) + 0.5 * rho * (u * u + v * v);
 }
 
 /* ---------------------------------------------------------------------------
@@ -31,7 +31,7 @@ static bool test_wall_zero_mass_flux() {
     double n[2] = {1.0, 0.0};
     double Fhat[4];
     double smag;
-    WallFlux(U, n, gamma, Fhat, smag);
+    WallFlux(U, n, gammad, Fhat, smag);
     bool ok = std::fabs(Fhat[0]) < tol;
     std::printf("  WallFlux: Fhat[0] (mass) = %.2e  %s\n", Fhat[0], ok ? "PASS" : "FAIL");
     return ok;
@@ -43,7 +43,7 @@ static bool test_wall_zero_energy_flux() {
     double n[2] = {1.0, 0.0};
     double Fhat[4];
     double smag;
-    WallFlux(U, n, gamma, Fhat, smag);
+    WallFlux(U, n, gammad, Fhat, smag);
     bool ok = std::fabs(Fhat[3]) < tol;
     std::printf("  WallFlux: Fhat[3] (energy) = %.2e  %s\n", Fhat[3], ok ? "PASS" : "FAIL");
     return ok;
@@ -58,7 +58,7 @@ static bool test_wall_momentum_equals_pressure() {
     U_from_prim(rho, u, v, p, U);
     double Fhat[4];
     double smag;
-    WallFlux(U, n, gamma, Fhat, smag);
+    WallFlux(U, n, gammad, Fhat, smag);
     bool ok = (std::fabs(Fhat[1] - p * n[0]) < tol && std::fabs(Fhat[2] - p * n[1]) < tol);
     std::printf("  WallFlux: Fhat[1,2] = p*n (parallel flow)  err=%.2e  %s\n",
                 std::max(std::fabs(Fhat[1] - p * n[0]), std::fabs(Fhat[2] - p * n[1])),
@@ -73,14 +73,14 @@ static bool test_wall_rotated_exactness() {
     double rho = 1.0, u = 0.0, v = 0.0, p = 0.85;
     U_from_prim(rho, u, v, p, U);
     double rhoL, uL, vL, pL, cL;
-    consToPrim(U, gamma, rhoL, uL, vL, pL, cL);
+    consToPrim(U, gammad, rhoL, uL, vL, pL, cL);
     double max_err = 0.0;
     for (int k = 0; k < 8; ++k) {
         double theta = 0.3 + 0.7 * k;  /* arbitrary angles */
         double n[2] = {std::cos(theta), std::sin(theta)};
         double Fhat[4];
         double smag;
-        WallFlux(U, n, gamma, Fhat, smag);
+        WallFlux(U, n, gammad, Fhat, smag);
         max_err = std::max(max_err, std::fabs(Fhat[0]));
         max_err = std::max(max_err, std::fabs(Fhat[1] - pL * n[0]));
         max_err = std::max(max_err, std::fabs(Fhat[2] - pL * n[1]));
@@ -98,17 +98,17 @@ static bool test_wall_rotated_exactness() {
  * When interior state UL equals the inflow state Ub, flux should match physical flux.
  */
 static bool test_inflow_consistency() {
-    const double rho0 = 1.0, a0 = 1.0, R = 1.0 / gamma;
+    const double rho0 = 1.0, a0 = 1.0, R = 1.0 / gammad;
     const double alpha = 50.0 * 3.14159265 / 180.0;
     double rho, u, v, p;
-    isentropic_prim_from_M(rho0, rho0 * a0 * a0 / gamma, gamma, 0.1, alpha, rho, u, v, p);
+    isentropic_prim_from_M(rho0, rho0 * a0 * a0 / gammad, gammad, 0.1, alpha, rho, u, v, p);
     double nin[2] = {std::cos(alpha), std::sin(alpha)};
     double UL[4];
     U_from_prim(rho, u, v, p, UL);
     double n[2] = {-nin[0], -nin[1]};  /* outward normal opposite to inflow */
     double Fhat[4], Fphys[4], smag;
-    InflowFlux(UL, n, nin, rho0, a0, gamma, R, fluxROE, Fhat, smag);
-    physicalFlux(UL, n, gamma, Fphys);
+    InflowFlux(UL, n, nin, rho0, a0, gammad, R, fluxROE, Fhat, smag);
+    physicalFlux(UL, n, gammad, Fphys);
     double err = 0.0;
     for (int k = 0; k < 4; ++k) err = std::max(err, std::fabs(Fhat[k] - Fphys[k]));
     bool ok = err < 1e-8;  /* looser: inflow may differ slightly when UL≈Ub */
@@ -117,10 +117,10 @@ static bool test_inflow_consistency() {
 }
 
 static bool test_inflow_flux_direction() {
-    const double rho0 = 1.0, a0 = 1.0, R = 1.0 / gamma;
+    const double rho0 = 1.0, a0 = 1.0, R = 1.0 / gammad;
     /* Use state very close to inflow (M~0.1) to avoid quadratic discriminant issues */
     double rho, u, v, p;
-    isentropic_prim_from_M(rho0, rho0 * a0 * a0 / gamma, gamma, 0.08,
+    isentropic_prim_from_M(rho0, rho0 * a0 * a0 / gammad, gammad, 0.08,
                            50.0 * 3.14159265 / 180.0, rho, u, v, p);
     double UL[4];
     U_from_prim(rho, u, v, p, UL);
@@ -128,7 +128,7 @@ static bool test_inflow_flux_direction() {
     double n[2] = {-1.0, 0.0};  /* outward normal */
     double Fhat[4], smag;
     try {
-        InflowFlux(UL, n, nin, rho0, a0, gamma, R, fluxROE, Fhat, smag);
+        InflowFlux(UL, n, nin, rho0, a0, gammad, R, fluxROE, Fhat, smag);
     } catch (const std::exception& e) {
         std::printf("  InflowFlux: threw %s  FAIL\n", e.what());
         return false;
@@ -141,27 +141,27 @@ static bool test_inflow_flux_direction() {
 
 /* Inflow Reverse Engineering: total_pressure(Ub)=Pt, total_temperature(Ub)=Tt, v_b || nin */
 static bool test_inflow_reverse_engineering() {
-    const double rho0 = 1.0, a0 = 1.0, R = 1.0 / gamma;
-    const double input_Pt = rho0 * a0 * a0 / gamma;
-    const double input_Tt = (a0 * a0) / (gamma * R);
+    const double rho0 = 1.0, a0 = 1.0, R = 1.0 / gammad;
+    const double input_Pt = rho0 * a0 * a0 / gammad;
+    const double input_Tt = (a0 * a0) / (gammad * R);
     const double alpha = 50.0 * 3.14159265 / 180.0;
     double nin[2] = {std::cos(alpha), std::sin(alpha)};
     double rho, u, v, p;
-    isentropic_prim_from_M(rho0, input_Pt, gamma, 0.1, alpha, rho, u, v, p);
+    isentropic_prim_from_M(rho0, input_Pt, gammad, 0.1, alpha, rho, u, v, p);
     double UL[4];
     U_from_prim(rho, u, v, p, UL);
     double n[2] = {-nin[0], -nin[1]};
     double Ub[4];
     try {
-        InflowFlux_compute_Ub(UL, n, nin, rho0, a0, gamma, R, Ub);
+        InflowFlux_compute_Ub(UL, n, nin, rho0, a0, gammad, R, Ub);
     } catch (const std::exception& e) {
         std::printf("  InflowFlux: reverse eng threw %s  FAIL\n", e.what());
         return false;
     }
     double rhob, ub, vb, pb, cb;
-    consToPrim(Ub, gamma, rhob, ub, vb, pb, cb);
-    double pt_Ub = total_pressure(rhob, ub, vb, pb, gamma);
-    double Tt_Ub = total_temperature(rhob, ub, vb, pb, gamma);
+    consToPrim(Ub, gammad, rhob, ub, vb, pb, cb);
+    double pt_Ub = total_pressure(rhob, ub, vb, pb, gammad);
+    double Tt_Ub = total_temperature(rhob, ub, vb, pb, gammad);
     double err_pt = std::fabs(pt_Ub - input_Pt);
     double err_Tt = std::fabs(Tt_Ub - input_Tt);
     double vmag = std::sqrt(ub*ub + vb*vb);
@@ -185,8 +185,8 @@ static bool test_outflow_consistency() {
     U_from_prim(0.9, 0.3, 0.1, pout, UL);  /* pL = pout */
     double n[2] = {1.0, 0.0};
     double Fhat[4], Fphys[4], smag;
-    OutflowFlux(UL, n, pout, gamma, fluxROE, Fhat, smag);
-    physicalFlux(UL, n, gamma, Fphys);
+    OutflowFlux(UL, n, pout, gammad, fluxROE, Fhat, smag);
+    physicalFlux(UL, n, gammad, Fphys);
     double err = 0.0;
     for (int k = 0; k < 4; ++k) err = std::max(err, std::fabs(Fhat[k] - Fphys[k]));
     bool ok = err < 1e-8;
@@ -200,7 +200,7 @@ static bool test_outflow_flux_direction() {
     U_from_prim(0.9, 0.3, 0.1, 0.8, UL);  /* pL > pout, flow out */
     double n[2] = {1.0, 0.0};
     double Fhat[4], smag;
-    OutflowFlux(UL, n, pout, gamma, fluxROE, Fhat, smag);
+    OutflowFlux(UL, n, pout, gammad, fluxROE, Fhat, smag);
     /* For outflow, mass flux Fhat[0] should be positive (flow out, n outward) */
     bool ok = Fhat[0] > 0.0;
     std::printf("  OutflowFlux: Fhat[0] (mass) > 0 for outflow  Fhat[0]=%.4e  %s\n", Fhat[0], ok ? "PASS" : "FAIL");
@@ -214,17 +214,17 @@ static bool test_outflow_riemann_invariant() {
     U_from_prim(0.9, 0.3, 0.1, 0.8, UL);
     double n[2] = {1.0, 0.0};
     double Ub[4];
-    OutflowFlux_compute_Ub(UL, n, pout, gamma, Ub);
+    OutflowFlux_compute_Ub(UL, n, pout, gammad, Ub);
     double rhoL, uL, vL, pL, cL;
-    consToPrim(UL, gamma, rhoL, uL, vL, pL, cL);
+    consToPrim(UL, gammad, rhoL, uL, vL, pL, cL);
     double rhob, ub, vb, pb, cb;
-    consToPrim(Ub, gamma, rhob, ub, vb, pb, cb);
-    double SL = pL / std::pow(rhoL, gamma);
-    double Sb = pb / std::pow(rhob, gamma);
+    consToPrim(Ub, gammad, rhob, ub, vb, pb, cb);
+    double SL = pL / std::pow(rhoL, gammad);
+    double Sb = pb / std::pow(rhob, gammad);
     double unL = uL*n[0] + vL*n[1];
     double unb = ub*n[0] + vb*n[1];
-    double J_L = unL + 2*cL/(gamma - 1);
-    double J_b = unb + 2*cb/(gamma - 1);
+    double J_L = unL + 2*cL/(gammad - 1);
+    double J_b = unb + 2*cb/(gammad - 1);
     double err_pb = std::fabs(pb - pout);
     double err_S = std::fabs(Sb - SL);
     double err_J = std::fabs(J_b - J_L);
