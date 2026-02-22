@@ -67,8 +67,8 @@ int run_unsteady() {
     FluxFn flux_fn = fluxROE;
     ReconFn recon_fn = reconstruct_nolimiter;
 
-    const char* gri_file = "/home/linfel/umich_course/623_CFD/mesh/ver2/global_refine_2.gr";
-    const char* out_dir =  "/home/linfel/umich_course/623_CFD/data/unsteady/1st_unsteady_rfn2_solutions";
+    const char* gri_file = "/home/linfel/umich_course/623_CFD/mesh/ver2/global_refine_1.gri";
+    const char* out_dir =  "/home/linfel/umich_course/623_CFD/data/unsteady/test1";
     const double t_end = 200;         /* run until periodic; adjust as needed */
     const double vtu_interval = 0.2;	
     const double CFL = 0.3;
@@ -104,6 +104,6 @@ int run_unsteady() {
 
 int main() {
     /* switch run as needed */
-		rst_unsteady();	
-		//run_unsteady()
+    //rst_unsteady();	
+    run_unsteady();
 }

@@ -16,7 +16,7 @@ typedef void (*FluxFn)(const double*, const double*, const double*, double, doub
  */
 void calcRes(const GriMesh& mesh, const double* U, double* R, double gammad,
             const ProblemParams& params, FluxFn flux_fn, ReconFn recon_fn,
-            double* dt_per_cell = nullptr, double CFL = 0.5, double t = -1.0);
+            double* dt_per_cell, double& dt_min, double CFL = 0.5, double t = -1.0);
 
 /** SSP-RK3 with global dt (generic). Returns dt used. t: current time for time-dependent inflow. */
 double SSPRK3(const GriMesh& mesh, double* U, double gammad,
