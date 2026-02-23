@@ -9,8 +9,9 @@
 #include <sstream>
 #include <cmath>
 #include <vector>
+#include <iostream>
 
-bool write_vtu(const GriMesh& mesh, const double* U, double gamma,
+bool write_vtu(const GriMesh& mesh, const double* U, double gammad,
               const char* filepath) {
     std::ofstream f(filepath);
     if (!f.is_open())
@@ -20,7 +21,7 @@ bool write_vtu(const GriMesh& mesh, const double* U, double gamma,
     std::vector<double> rho(mesh.Ne), u(mesh.Ne), v(mesh.Ne), p(mesh.Ne);
     for (int i = 0; i < mesh.Ne; ++i) {
         double c;
-        consToPrim(&U[i * 4], gamma, rho[i], u[i], v[i], p[i], c);
+        consToPrim(&U[i * 4], gammad, rho[i], u[i], v[i], p[i], c);
     }
 
     /* wall_marker: 0 = non-wall; +1,+2,+3 = top wall (BGroup2), edge 1-indexed; -1,-2,-3 = bottom wall (BGroup6) */
@@ -116,7 +117,7 @@ bool parse_dataarray(const std::string& content, const char* name, std::vector<d
 }
 }  // namespace
 
-bool read_vtu(const GriMesh& mesh, const char* filepath, double gamma, double* U) {
+bool read_vtu(const GriMesh& mesh, const char* filepath, double gammad, double* U) {
     std::ifstream f(filepath);
     if (!f.is_open()) return false;
     std::stringstream buf;
@@ -128,12 +129,15 @@ bool read_vtu(const GriMesh& mesh, const char* filepath, double gamma, double* U
         !parse_dataarray(content, "v", v) || !parse_dataarray(content, "p", p))
         return false;
     if ((int)rho.size() != mesh.Ne || (int)u.size() != mesh.Ne ||
-        (int)v.size() != mesh.Ne || (int)p.size() != mesh.Ne)
+        (int)v.size() != mesh.Ne || (int)p.size() != mesh.Ne) {
+        std::cerr << "Mesh mismatch: VTU has " << rho.size()
+                  << " cells, mesh has " << mesh.Ne << ".\n";
         return false;
+    }
 
     for (int i = 0; i < mesh.Ne; ++i) {
         double Ui[4];
-        primToCons(rho[i], u[i], v[i], p[i], gamma, Ui);
+        primToCons(rho[i], u[i], v[i], p[i], gammad, Ui);
         U[i * 4 + 0] = Ui[0];
         U[i * 4 + 1] = Ui[1];
         U[i * 4 + 2] = Ui[2];

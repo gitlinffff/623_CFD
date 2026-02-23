@@ -3,14 +3,14 @@
 #include <iostream>
 #include <cmath>
 
-static const double gamma = 1.4;
+static const double gammad = 1.4;
 static const double tol = 1e-10;
 
 static void U_from_prim(double rho, double u, double v, double p, double U[4]) {
     U[0] = rho;
     U[1] = rho * u;
     U[2] = rho * v;
-    U[3] = p / (gamma - 1.0) + 0.5 * rho * (u * u + v * v);
+    U[3] = p / (gammad - 1.0) + 0.5 * rho * (u * u + v * v);
 }
 
 static double vec4_diff(const double a[4], const double b[4]) {
@@ -29,8 +29,8 @@ static bool test_consistency(const char* scheme, void (*flux)(const double*, con
     double n[2] = { 1.0, 0.0 };
 
     double Fhat[4], Fphys[4], smag;
-    flux(U, U, n, gamma, Fhat, smag);
-    physicalFlux(U, n, gamma, Fphys);
+    flux(U, U, n, gammad, Fhat, smag);
+    physicalFlux(U, n, gammad, Fphys);
 
     double err = vec4_diff(Fhat, Fphys);
     bool ok = (err < tol);
@@ -47,8 +47,8 @@ static bool test_exchange_symmetry(const char* scheme, void (*flux)(const double
     double n_neg[2] = { -1.0, 0.0 };
 
     double Fhat_LR[4], Fhat_RL[4], smag;
-    flux(UL, UR, n, gamma, Fhat_LR, smag);
-    flux(UR, UL, n_neg, gamma, Fhat_RL, smag);
+    flux(UL, UR, n, gammad, Fhat_LR, smag);
+    flux(UR, UL, n_neg, gammad, Fhat_RL, smag);
     for (int k = 0; k < 4; ++k) Fhat_RL[k] = -Fhat_RL[k];
 
     double err = vec4_diff(Fhat_LR, Fhat_RL);
@@ -80,8 +80,8 @@ static bool test_rotation_invariance(const char* scheme, void (*flux)(const doub
     n_rot[1] = n[0] * s + n[1] * c;
 
     double Fhat_orig[4], Fhat_rot[4], smag;
-    flux(UL, UR, n, gamma, Fhat_orig, smag);
-    flux(UL_rot, UR_rot, n_rot, gamma, Fhat_rot, smag);
+    flux(UL, UR, n, gammad, Fhat_orig, smag);
+    flux(UL_rot, UR_rot, n_rot, gammad, Fhat_rot, smag);
 
     double Fhat_expected[4];
     Fhat_expected[0] = Fhat_orig[0];

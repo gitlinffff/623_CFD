@@ -22,36 +22,44 @@ static void ensure_dir(const char* path) {
 #endif
 }
 
-int main() {
+int rst_unsteady() {
+    /* restart unsteady run*/
+    const double gammad = 1.4;
+    FluxFn flux_fn = fluxROE;
+    ReconFn recon_fn = reconstruct_nolimiter;
+
+    const double t_end = 400;         /* run until periodic; adjust as needed */
+    const double vtu_interval = 0.2;  
+    const double CFL = 0.3;
+    const char* gri_file = "/home/linfel/umich_course/623_CFD/mesh/ver2/coarse_mesh.gri";
+    const char* rst_file = "/home/linfel/umich_course/623_CFD/data/steady_results/coarse_2nd.vtu";
+    const char* out_dir = "/home/linfel/umich_course/623_CFD/data/unsteady/2nd_nolimit_coarse_solutions";
+
     GriMesh mesh;
-    if (!read_gri("mesh/initial_mesh_3.gri", mesh)) {
+    if (!read_gri(gri_file, mesh)) {
         std::cerr << "Failed to read mesh.\n";
         return 1;
     }
-
-    const double gamma = 1.4;
-    FluxFn flux_fn = fluxROE;
-    ReconFn recon_fn = reconstruct_LCD;
+    ensure_dir(out_dir);
 
     ProblemParams params;
     std::vector<double> U(mesh.Ne * 4);
-    initialize_uniform(U.data(), mesh.Ne, 0.1, params);
 
     std::cout << "Mesh: " << mesh.Ne << " elements, "
               << mesh.num_interior_faces << " interior, "
               << mesh.num_boundary_faces << " boundary faces.\n";
 
-    ensure_dir("data");
-    ensure_dir("data/results-2");
+    if (!read_vtu(mesh, rst_file, gammad, U.data())) {
+        std::cerr << "Error: failed to read or mesh mismatch: " << rst_file << "\n";
+        return 1;
+    }
+    std::cout << "Loaded: " << rst_file << "\n";
 
-    /* 1st order for 33800 steps, then 2nd order (recon_fn) until convergence */
-    solve_steady_2nd(mesh, U.data(), gamma, params, flux_fn, recon_fn, 0.1, 50, 100000, 30000);
-
-    const char* out_path = "data/results/solution.vtu";
-    if (write_vtu(mesh, U.data(), gamma, out_path))
-        std::cout << "Output: " << out_path << "\n";
-    else
-        std::cerr << "Failed to write VTU.\n";
+    solve_unsteady(mesh, U.data(), gammad, params, flux_fn, recon_fn, CFL, t_end, vtu_interval, 50, out_dir);
 
     return 0;
+}
+
+int main() {
+    rst_unsteady();
 }
