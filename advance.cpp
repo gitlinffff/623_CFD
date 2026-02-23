@@ -112,7 +112,7 @@ void calcRes(const GriMesh& mesh, const double* U, double* R, double gammad,
     for (int i = 0; i < mesh.Ne; ++i) {
         double denom = std::max(sum_s[i], 1e-14);
         double dt_elem = (2.0 * mesh.Area[i] * CFL) / denom;
-				//std::cout << dt_elem << std::endl;
+//				std::cout << dt_elem << "   " << denom << std::endl;
 				if (dt_per_cell) dt_per_cell[i] = dt_elem;
 				if (dt_elem < dt_min) dt_min = dt_elem;
     }
