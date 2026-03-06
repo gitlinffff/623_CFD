@@ -52,14 +52,14 @@ void calcRes(const GriMesh& mesh, const double* U, double* R, double gammad,
         //double AL = mesh.Area[elemL];
         //double AR = mesh.Area[elemR];
 
-        R[elemL * 4 + 0] -= Fhat[0];
-        R[elemL * 4 + 1] -= Fhat[1];
-        R[elemL * 4 + 2] -= Fhat[2];
-        R[elemL * 4 + 3] -= Fhat[3];
-        R[elemR * 4 + 0] += Fhat[0];
-        R[elemR * 4 + 1] += Fhat[1];
-        R[elemR * 4 + 2] += Fhat[2];
-        R[elemR * 4 + 3] += Fhat[3];
+        R[elemL * 4 + 0] -= Fhat[0]*L;
+        R[elemL * 4 + 1] -= Fhat[1]*L;
+        R[elemL * 4 + 2] -= Fhat[2]*L;
+        R[elemL * 4 + 3] -= Fhat[3]*L;
+        R[elemR * 4 + 0] += Fhat[0]*L;
+        R[elemR * 4 + 1] += Fhat[1]*L;
+        R[elemR * 4 + 2] += Fhat[2]*L;
+        R[elemR * 4 + 3] += Fhat[3]*L;
 
         sum_s[elemL] += smag * L;
         sum_s[elemR] += smag * L;
@@ -100,10 +100,10 @@ void calcRes(const GriMesh& mesh, const double* U, double* R, double gammad,
         else
             flux_fn(UL, UL, n, gammad, Fhat, smag);
 
-        R[elem * 4 + 0] -= Fhat[0];
-        R[elem * 4 + 1] -= Fhat[1];
-        R[elem * 4 + 2] -= Fhat[2];
-        R[elem * 4 + 3] -= Fhat[3];
+        R[elem * 4 + 0] -= Fhat[0]*L;
+        R[elem * 4 + 1] -= Fhat[1]*L;
+        R[elem * 4 + 2] -= Fhat[2]*L;
+        R[elem * 4 + 3] -= Fhat[3]*L;
 
         sum_s[elem] += smag * L;
     }
@@ -134,19 +134,19 @@ double SSPRK3(const GriMesh& mesh, double* U, double gammad,
     calcRes(mesh, U, R.data(), gammad, params, flux_fn, recon_fn, dt_local.data(), dt_global, CFL, t);
     for (int i = 0; i < mesh.Ne; ++i) {
         for (int k = 0; k < 4; ++k)
-            U1[i * 4 + k] = U[i * 4 + k] + dt_global * R[i * 4 + k];
+            U1[i * 4 + k] = U[i * 4 + k] + dt_global/mesh.Area[i] * R[i * 4 + k];
     }
 
     calcRes(mesh, U1.data(), R.data(), gammad, params, flux_fn, recon_fn, dt_local.data(), dummy_dt, CFL, t + dt_global);
     for (int i = 0; i < mesh.Ne; ++i) {
         for (int k = 0; k < 4; ++k)
-            U2[i * 4 + k] = 0.75 * U[i * 4 + k] + 0.25 * (U1[i * 4 + k] + dt_global * R[i * 4 + k]);
+            U2[i * 4 + k] = 0.75 * U[i * 4 + k] + 0.25 * (U1[i * 4 + k] + dt_global/mesh.Area[i] * R[i * 4 + k]);
     }
 
     calcRes(mesh, U2.data(), R.data(), gammad, params, flux_fn, recon_fn, dt_local.data(), dummy_dt, CFL, t + 0.5*dt_global);
     for (int i = 0; i < mesh.Ne; ++i) {
         for (int k = 0; k < 4; ++k)
-            U[i * 4 + k] = (1.0 / 3.0) * U[i * 4 + k] + (2.0 / 3.0) * (U2[i * 4 + k] + dt_global * R[i * 4 + k]);
+            U[i * 4 + k] = (1.0 / 3.0) * U[i * 4 + k] + (2.0 / 3.0) * (U2[i * 4 + k] + dt_global/mesh.Area[i] * R[i * 4 + k]);
     }
     return dt_global;
 }

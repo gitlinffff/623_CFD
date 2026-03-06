@@ -64,12 +64,12 @@ int rst_unsteady() {
 int run_unsteady() {
     /* run steady then unsteady based on steady solution */
     const double gammad = 1.4;
-    FluxFn flux_fn = fluxRusanov;
-    ReconFn recon_fn = reconstruct_const;
+    FluxFn flux_fn = fluxROE;
+    ReconFn recon_fn = reconstruct_nolimiter;
 
-    const char* gri_file = "/home/linfel/umich_course/623_CFD/mesh/ver2/coarse_mesh.gri";
+    const char* gri_file = "/home/linfel/umich_course/623_CFD/mesh/ver2/global_refine_1.gri";
     const char* out_dir =  "/home/linfel/umich_course/623_CFD/data/unsteady/test1";
-    const double t_end = 200;         /* run until periodic; adjust as needed */
+    const double t_end = 300;         /* run until periodic; adjust as needed */
     const double vtu_interval = 0.2;	
     const double CFL = 0.3;
 
