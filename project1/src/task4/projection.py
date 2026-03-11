@@ -171,11 +171,11 @@ def calcProjection(P, blade_segments):
 #     return h
 
 def sizing_function_1(d, xb, xL, xT):
-    A = 0.47
-    B = 0.47
+    A = 1.4
+    B = 1.4
     alpha = 0.5
-    delta = 0.1
-    hmin = 0.01
+    delta = 5
+    hmin = 0.6
     
     term1 = A * (1 + np.exp(-((xL-xT)/delta)**2) - np.exp(-((xb-xL)/delta)**2) - np.exp(-((xb-xT)/delta)**2)) + np.sqrt(hmin)
     term2 = B * d**alpha + np.sqrt(hmin)
@@ -184,10 +184,10 @@ def sizing_function_1(d, xb, xL, xT):
 
 def sizing_function_2(d, xb, xL, xT):
     hmin = 0.6
-    sigma = 12
-    delta = 11
+    sigma = 13
+    delta = 9
 
-    h = hmin * np.exp(-(xb-xL)*(xb-xT)/sigma**2) * np.exp(d/delta)
+    h = hmin * np.exp(abs((xb-xL)*(xb-xT)/sigma**2)) * np.exp(d/delta)
     return h
 
 def sizing_function(d, xb):

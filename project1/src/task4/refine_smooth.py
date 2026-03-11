@@ -31,6 +31,7 @@ def plot_mesh_and_h_field(V, E, edge_midpoints, h_field, save_path):
     plt.xlabel('x')
     plt.ylabel('y')
     plt.savefig(save_path, dpi=400, pad_inches=0.1, bbox_inches='tight')
+    plt.close()
 
 def plot_mesh(V, E, title, save_path=None):
     centroids = np.mean(V[E], axis=1)
@@ -45,9 +46,10 @@ def plot_mesh(V, E, title, save_path=None):
     plt.ylabel('y')
     #plt.show()
     #plt.savefig(save_path, dpi=400, pad_inches=0.1, bbox_inches='tight')
+    plt.close()
 
 def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
-    print("# Performing local refinement on the mesh...", flush=True)
+    print("\n# Performing local refinement on the mesh...", flush=True)
     mesh = readgri(input_gri_file)
     mats = generate_matrices(input_gri_file)
    
@@ -68,6 +70,7 @@ def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
     boundary_edges = {int(bgid): [] for bgid in range(1, 9)} # 8 BGroups
     periodic_pairs = {1:[], 2:[]} # use a dictionary to track 2 periodic groups of node pairs
 
+    buffer = 1.
     # loop over internal edges to flag those need refinement
     for row in I2E:
         elemL = row[0] - 1
@@ -99,7 +102,7 @@ def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
         # if it is ordinary internal edge
         if (L_n1 == R_n2) and (L_n2 == R_n1):
             # flag the edge if h < edge_length
-            if h < edge_length:
+            if h < edge_length * buffer:
                 # add the midpoint to new_nodes and flag it for both elements
                 new_nodes.append(edge_midpoint1)
                 flag[elemL, faceL-1] = next_node_index
@@ -126,7 +129,7 @@ def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
             periodic_pairs[PG].append((np.minimum(L_n2, R_n1), np.maximum(L_n2, R_n1)))
 
             # flag the edge if h < edge_length
-            if h < edge_length:
+            if h < edge_length * buffer:
                 # add 2 midpoints to new_nodes and flag them for both elements
                 new_nodes.append(edge_midpoint1)
                 flag[elemL, faceL-1] = next_node_index
@@ -167,7 +170,7 @@ def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
             edge_midpoint = proj_point  # use spline would be better
 
         # flag the edge if h < edge_length
-        if h < edge_length:
+        if h < edge_length * buffer:
             new_nodes.append(edge_midpoint)
             flag[elem, face-1] = next_node_index
             next_node_index += 1
@@ -240,8 +243,8 @@ def local_refinement(input_gri_file, output_gri_file='local_refined.gri'):
 
     return boundary_edges, periodic_pairs, len(new_nodes)
 
-def smooth_mesh(input_gri_file, BG, PG, w=0.8, output_gri_file='smoothed.gri'):
-    print("# Performing smoothing on the mesh...", flush=True)
+def smooth_mesh(input_gri_file, BG, PG, w=0.8, Niter=10, output_gri_file='smoothed.gri'):
+    print("\n# Performing smoothing on the mesh...", flush=True)
     mesh = readgri(input_gri_file)
     mats = generate_matrices(input_gri_file)
    
@@ -312,11 +315,11 @@ def smooth_mesh(input_gri_file, BG, PG, w=0.8, output_gri_file='smoothed.gri'):
 
     for pair in periodic_pairs: # used for debugging
         n1, n2 = pair
-        # if V[n1,0] not equal to  V[n2,0], assert error
+        # if V[n1,0] not equal to V[n2,0], assert error
         assert V[n1,0] == V[n2,0], f"Periodic node pair {n1} and {n2} do not have the same x coordinate."
 
     # smooth the mesh several times
-    for iter in range(10):
+    for iter in range(Niter):
         new_V = np.copy(V)
         # Loop over all nodes
         for i in range(adj_csr.shape[0]):
@@ -362,7 +365,7 @@ def smooth_mesh(input_gri_file, BG, PG, w=0.8, output_gri_file='smoothed.gri'):
     
 
 def global_refinement(input_gri_file, output_gri_file='global_refined.gri'):
-    print("# Performing GLOBAL refinement on the mesh...", flush=True)
+    print("\n# Performing GLOBAL refinement on the mesh...", flush=True)
     mesh = readgri(input_gri_file)
     mats = generate_matrices(input_gri_file)
    
@@ -371,6 +374,141 @@ def global_refinement(input_gri_file, output_gri_file='global_refined.gri'):
     V = mesh['V']     # 0-based indexing
     I2E = mats['I2E'] # 1-based indexing
     B2E = mats['B2E'] # 1-based indexing
+
+    # populate an array the same shape as E with -1 to track the new nodes index later
+    flag = np.ones(E.shape, dtype=int) * (-1)
+
+    edge_midpoints = []
+    h_field = []
+    next_node_index = len(V)  # start indexing new nodes from here
+    new_nodes = []
+    boundary_edges = {int(bgid): [] for bgid in range(1, 9)} # 8 BGroups
+    periodic_pairs = {1:[], 2:[]} # use a dictionary to track 2 periodic groups of node pairs
+
+    # loop over internal edges to flag those need refinement
+    for row in I2E:
+        elemL = row[0] - 1
+        faceL = row[1]
+        elemR = row[2] - 1
+        faceR = row[3]
+        
+        # get the two node indices for this internal edge from the left element
+        L_n1 = E[elemL, faceL-2]
+        L_n2 = E[elemL, faceL-3]
+
+        # get the two node indices for this internal edge from the right element
+        R_n1 = E[elemR, faceR-2]
+        R_n2 = E[elemR, faceR-3]
+
+        # The two midpoints should be the same, unless this internal edge is actually a periodic boundary edge
+        edge_midpoint1 = 0.5 * (V[L_n1] + V[L_n2])
+        edge_midpoint2 = 0.5 * (V[R_n1] + V[R_n2])
+        edge_midpoints.append(edge_midpoint1)
+
+        d, xb, proj_point = calcProjection(edge_midpoint1, blade_seg_coords)
+        h = sizing_function(d, xb, xL, xT)
+        h_field.append(h)
+        
+        # if it is ordinary internal edge
+        if (L_n1 == R_n2) and (L_n2 == R_n1):
+            # add the midpoint to new_nodes and flag it for both elements
+            new_nodes.append(edge_midpoint1)
+            flag[elemL, faceL-1] = next_node_index
+            flag[elemR, faceR-1] = next_node_index
+            next_node_index += 1
+        # if the internal edge is a periodic boundary edge
+        else:
+            if V[L_n1, 0] <= xL: # left Periodic Group, BGroup 1 and 7
+                PG = 1
+                if V[L_n1, 1] > V[R_n2, 1]:
+                    bgroup_L = 1; bgroup_R = 7
+                else:
+                    bgroup_L = 7; bgroup_R = 1
+            elif V[L_n1, 0] >= xT: # right Periodic Group, BGroup 3 and 5
+                PG = 2
+                if V[L_n1, 1] > V[R_n2, 1]:
+                    bgroup_L = 3; bgroup_R = 5
+                else:
+                    bgroup_L = 5; bgroup_R = 3
+            else: raise ValueError("Unexpected periodic node x coordinate.")
+
+            # add 2 midpoints to new_nodes and flag them for both elements
+            new_nodes.append(edge_midpoint1)
+            flag[elemL, faceL-1] = next_node_index
+            next_node_index += 1
+            new_nodes.append(edge_midpoint2)
+            flag[elemR, faceR-1] = next_node_index
+            next_node_index += 1
+            # track the boundary edges
+            boundary_edges[bgroup_L].append([L_n1, flag[elemL, faceL-1]])
+            boundary_edges[bgroup_L].append([flag[elemL, faceL-1], L_n2])
+            boundary_edges[bgroup_R].append([R_n1, flag[elemR, faceR-1]])
+            boundary_edges[bgroup_R].append([flag[elemR, faceR-1], R_n2])
+            # track the newly added periodic node pairs
+            periodic_pairs[PG].append((flag[elemL, faceL-1], flag[elemR, faceR-1]))
+            periodic_pairs[PG].append((np.minimum(L_n1, R_n2), np.maximum(L_n1, R_n2)))
+            periodic_pairs[PG].append((np.minimum(L_n2, R_n1), np.maximum(L_n2, R_n1)))
+
+    # loop over boundary edges
+    for row in B2E:
+        elem = row[0] - 1
+        face = row[1]
+        bgroup = row[2]
+
+        n1 = E[elem, face-2]
+        n2 = E[elem, face-3]
+
+        edge_midpoint = 0.5 * (V[n1] + V[n2])
+        edge_midpoints.append(edge_midpoint)
+   
+        d, xs, spl_proj = calcProjection(edge_midpoint, blade_seg_coords)
+        h = sizing_function(d, xs, xL, xT)
+        h_field.append(h)
+   
+        if bgroup in [2, 6]: # snap the edge midpoint to the blade if it is a blade edge
+            edge_midpoint = spl_proj
+
+        new_nodes.append(edge_midpoint)
+        flag[elem, face-1] = next_node_index
+        next_node_index += 1
+        # track the boundary edges
+        boundary_edges[bgroup].append([n1, flag[elem, face-1]])
+        boundary_edges[bgroup].append([flag[elem, face-1], n2])
+
+    edge_midpoints = np.array(edge_midpoints)
+    h_field = np.array(h_field)
+
+    # remove duplicate periodic node pairs
+    periodic_pairs[1] = list(set(periodic_pairs[1]))
+    periodic_pairs[2] = list(set(periodic_pairs[2]))
+
+    # add the new nodes to the list of vertices
+    V = np.vstack((V, np.array(new_nodes)))
+
+    new_elements = []
+    unflagged_elements = []
+    # loop over elements to create new elements for the refined mesh
+    for i in range(flag.shape[0]):
+        if np.count_nonzero(flag[i] == -1) == 0: # 3 edges flagged
+            for j in range(flag.shape[1]):
+                new_elements.append([E[i, j], flag[i, j-1], flag[i, j-2]])
+            new_elements.append([flag[i, 0], flag[i, 1], flag[i, 2]])
+
+        else:
+            unflagged_elements.append(i)
+
+    assert len(unflagged_elements)==0, "Error: The 3 edges of some elements are not fully flagged."
+    assert len(new_elements) == 4 * len(E), "Error: The number of elements did not quadruple after global refinement."
+
+    # new element array
+    E = np.array(new_elements)
+
+    plot_mesh_and_h_field(V, E, edge_midpoints, h_field, f'global_refined_{len(E)}.png')
+
+    # output new mesh in .gri
+    save_gri_file(output_gri_file, V, E+1, boundary_edges, periodic_pairs) # E has to be converted back to 1-based indexing
+
+    return boundary_edges, periodic_pairs
 
 
 def save_gri_file(filename, nodes, elements, BG, PG):
@@ -489,8 +627,8 @@ def check_mesh_consistency(coarsemesh_filepath, refinedmesh_filepath):
             print(f"  Node {pair[0]} <--> Node {pair[1]}")
 
 def main():
-    src = "../../output/initial_mesh4/initial_mesh.gri"
-    filepath = "mesh.gri"
+    src = "../../output/initial_mesh_5/initial_mesh.gri"
+    filepath = "coarse_mesh.gri"
     shutil.copy(src, filepath)
 
     iter_count = 0
@@ -500,8 +638,18 @@ def main():
         if N_newnodes == 0:
             print("No new nodes added. Refinement complete.")
             break
-        smooth_mesh(filepath, BG, PG, output_gri_file=filepath)
+        smooth_mesh(filepath, BG, PG, 0.8, 20, output_gri_file=filepath)
         print(f"iter {iter_count}: Number of new nodes added: {N_newnodes}")
+
+def run_global_refine():
+    BG, PG = global_refinement('coarse_mesh.gri', 'global_refine_1.gri')
+    #smooth_mesh('global_refine_1.gri', BG, PG, 0.8, 20, 'global_refine_1.gri')
+    
+    BG, PG = global_refinement('global_refine_1.gri', 'global_refine_2.gri')
+    #smooth_mesh('global_refine_2.gri', BG, PG, 0.8, 20, 'global_refine_2.gri')
+    
+    BG, PG = global_refinement('global_refine_2.gri', 'global_refine_3.gri')
+    #smooth_mesh('global_refine_3.gri', BG, PG, 0.8, 20, 'global_refine_3.gri')
 
 def test():
     src = "../../output/initial_mesh4/initial_mesh.gri"
@@ -522,3 +670,4 @@ def debug():
 
 if __name__ == "__main__":
     main()
+    run_global_refine()
