@@ -21,7 +21,7 @@ def resample_by_distance(coords, target_distance):
 
     return resampled_coords
 
-def build_domain(a, figname=""):
+def build_domain(a, n_LB, figname=""):
 
     file_bladelower = "../../data/bladelower.txt"
     file_bladeupper = "../../data/bladeupper.txt"
@@ -36,24 +36,22 @@ def build_domain(a, figname=""):
     Dx, Dy = bladelower[-1,0], bladelower[-1,1]
 
     # x grid for the periodic boundary group 1 and group 2
-    nBNodes = 9
-    PG1_up_xgrid = np.linspace(Ax-17.0, Ax, nBNodes) # x-nodes on periodic boundaries must match
+    PG1_up_xgrid = np.linspace(Ax-17.0, Ax, n_LB) # x-nodes on periodic boundaries must match
     PG1_low_xgrid = PG1_up_xgrid[::-1]                    # reverse
-    PG2_up_xgrid = np.linspace(Dx, Dx+17.0, nBNodes) # x-nodes on periodic boundaries must match
+    PG2_up_xgrid = np.linspace(Dx, Dx+17.0, n_LB) # x-nodes on periodic boundaries must match
     PG2_low_xgrid = PG2_up_xgrid[::-1]                    # reverse
 
     # y grid for the periodic boundary group 1 and group 2
-    PG1_up_ygrid  = np.full(nBNodes, Ay)
-    PG1_low_ygrid = np.full(nBNodes, By)
-    PG2_up_ygrid  = np.full(nBNodes, Dy)
-    PG2_low_ygrid = np.full(nBNodes, Cy)
+    PG1_up_ygrid  = np.full(n_LB, Ay)
+    PG1_low_ygrid = np.full(n_LB, By)
+    PG2_up_ygrid  = np.full(n_LB, Dy)
+    PG2_low_ygrid = np.full(n_LB, Cy)
 
     # inflow and outflow boundaries
-    nBNodes_inout = 9
-    inflow_xgrid = np.full(nBNodes_inout, Ax-17.0)
-    inflow_ygrid = np.linspace(By, Ay, nBNodes_inout)
-    outflow_xgrid = np.full(nBNodes_inout, Dx+17.0)
-    outflow_ygrid = np.linspace(Dy, Cy, nBNodes_inout)
+    inflow_xgrid = np.full(n_LB, Ax-17.0)
+    inflow_ygrid = np.linspace(By, Ay, n_LB)
+    outflow_xgrid = np.full(n_LB, Dx+17.0)
+    outflow_ygrid = np.linspace(Dy, Cy, n_LB)
 
     # Resample blade nodes
     bladelower_coarse = resample_by_distance(bladelower, 0.85*a)
@@ -127,6 +125,6 @@ def build_domain(a, figname=""):
     return Bnodes, Btmn_idx, PG, extent
 
 if __name__ == "__main__":
-    a = 17./8. # edge length of an equilateral triangle
-    build_domain(a, "../../output/project1/domain_boundary.png")
-    #build_domain()
+    n_LB = 6
+    a = 17.5/(n_LB-1) # edge length of an equilateral triangle
+    build_domain(a, n_LB, "../../output/project1/domain_boundary.png")
