@@ -46,8 +46,8 @@ def plot_mesh_and_h_field(V, E, edge_midpoints, h_field, save_path):
     plt.title(save_path.split('.')[0])
     plt.xlabel('x')
     plt.ylabel('y')
-    plt.show()
     plt.savefig(save_path, dpi=400, pad_inches=0.1, bbox_inches='tight')
+#    plt.show()
     plt.close()
 
 def plot_mesh(V, E, title, save_path=None):
