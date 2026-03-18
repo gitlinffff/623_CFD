@@ -17,19 +17,36 @@ def plot_mesh_and_h_field(V, E, edge_midpoints, h_field, save_path):
     centroids = np.mean(V[E], axis=1)
     plt.figure(figsize=(12, 8))
     plt.triplot(V[:, 0], V[:, 1], E, color='gray', lw=0.5)
-#    plt.scatter(edge_midpoints[:, 0], edge_midpoints[:, 1], 3, c=h_field, cmap='viridis')
-#    plt.colorbar(label='h_field')
+    
+    # plot size function in the field
+    if (0):
+        plt.scatter(edge_midpoints[:, 0], edge_midpoints[:, 1], 3, c=h_field, cmap='viridis')
+        plt.colorbar(label='h_field')
 
-#    for i, (x, y) in enumerate(centroids):
-#        plt.text(x, y, str(i), fontsize=1.5, color='red', ha='center', va='center')
+    # plot element index
+    if (0):
+        for i, (x, y) in enumerate(centroids):
+            plt.text(x, y, str(i), fontsize=1.5, color='red', ha='center', va='center')
 
-#    for i, (x, y) in enumerate(V):
-#        plt.text(x, y, str(i), fontsize=2., color='red', ha='center', va='center')
+    # plot node index
+    if (0):
+        for i, (x, y) in enumerate(V):
+            plt.text(x, y, str(i), fontsize=8., color='red', ha='center', va='center')
+
+    # plot original blade points
+    if (0):
+        bladeupper = np.genfromtxt("../../data/bladeupper.txt")
+        bladelower = np.genfromtxt("../../data/bladelower.txt")
+        bladeupper[:, 1] -= 18
+        plt.plot(bladeupper[:,0], bladeupper[:,1], 'bo-', ms=1, lw=0.5)
+        plt.plot(bladelower[:,0], bladelower[:,1], 'bo-', ms=2, lw=0.5)
 
     plt.gca().set_aspect('equal', adjustable='box')
-    plt.title('Sizing Function h_field on Edge Midpoints')
+#    plt.title('Sizing Function h_field on Edge Midpoints')
+    plt.title(save_path.split('.')[0])
     plt.xlabel('x')
     plt.ylabel('y')
+    plt.show()
     plt.savefig(save_path, dpi=400, pad_inches=0.1, bbox_inches='tight')
     plt.close()
 
@@ -626,7 +643,7 @@ def check_mesh_consistency(coarsemesh_filepath, refinedmesh_filepath):
         for pair in value:
             print(f"  Node {pair[0]} <--> Node {pair[1]}")
 
-def main():
+def run_local_refine():
     src = "../../output/initial_mesh_5/initial_mesh.gri"
     filepath = "coarse_mesh.gri"
     shutil.copy(src, filepath)
@@ -669,5 +686,5 @@ def debug():
     BG, PG, N_newnodes = local_refinement(input_gri_file, output_gri_file)
 
 if __name__ == "__main__":
-    main()
+    run_local_refine()
     run_global_refine()

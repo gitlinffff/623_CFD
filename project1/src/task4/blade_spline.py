@@ -13,8 +13,8 @@ ds = np.sqrt(np.sum(np.diff(coords, axis=0)**2, axis=1))
 s = np.insert(np.cumsum(ds), 0, 0)
 
 # Create splines for x and y
-spline_x = CubicSpline(s, coords[:, 0], bc_type='periodic')
-spline_y = CubicSpline(s, coords[:, 1], bc_type='periodic')
+spline_x = CubicSpline(s, coords[:, 0], bc_type='natural')
+spline_y = CubicSpline(s, coords[:, 1], bc_type='natural')
 
 
 
